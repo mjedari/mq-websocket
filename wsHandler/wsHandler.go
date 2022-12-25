@@ -56,7 +56,7 @@ func reader(conn *websocket.Conn) {
 		// read in a message
 		_, p, err := conn.ReadMessage()
 		if err != nil {
-			CloaseConnection(conn)
+			CloseConnection(conn)
 			log.Println(err)
 			return
 		}
@@ -65,7 +65,7 @@ func reader(conn *websocket.Conn) {
 	}
 }
 
-func CloaseConnection(conn *websocket.Conn) {
+func CloseConnection(conn *websocket.Conn) {
 	defer conn.Close()
 	for i, connItem := range connections {
 		if connItem == conn {
