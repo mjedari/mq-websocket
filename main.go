@@ -7,22 +7,22 @@ import (
 	"time"
 	"websocket/configs"
 	"websocket/kafkaManager"
+	"websocket/publicMessageManager"
+	"websocket/wsHandler"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/gorilla/websocket"
 )
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  configs.ReadBufferSize,
-	WriteBufferSize: configs.WriteBufferSize,
-	CheckOrigin:     func(r *http.Request) bool { return true },
-}
 
 func main() {
 	InitSentry()
 	CreateTopics() // create required websocket topics
-	http.HandleFunc("/ws", wsEndpoint)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	go publicMessageManager.ReceiveMessages()
+	http.HandleFunc("/", wsHandler.WsHandler)
+	err := http.ListenAndServe(":"+configs.WebSocketPort, nil)
+	if err != nil {
+		log.Fatal(err)
+		sentry.CaptureException(err)
+	}
 }
 
 func InitSentry() {
@@ -51,47 +51,4 @@ func InitSentry() {
 func CreateTopics() {
 	ctx := context.Background()
 	kafkaManager.CreateTopic(ctx, configs.WebSocketPublicTopic)
-}
-
-func wsEndpoint(w http.ResponseWriter, r *http.Request) {
-	// upgrade this connection to a WebSocket
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
-	}
-
-	log.Println("Client Connected")
-	log.Println(ws.RemoteAddr())
-	err = ws.WriteMessage(1, []byte("Hi Client!"))
-	if err != nil {
-		log.Println(err)
-	}
-
-	go reader(ws)
-	go writer(ws)
-}
-
-func reader(conn *websocket.Conn) {
-	for {
-		// read in a message
-		_, p, err := conn.ReadMessage()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		// print out that message for clarity
-		log.Println(string(p))
-	}
-}
-
-func writer(conn *websocket.Conn) {
-	for {
-		time.Sleep(time.Second * 2)
-		messageByte := []byte("salam")
-		messageType := 1
-		if err := conn.WriteMessage(messageType, messageByte); err != nil {
-			log.Println(err)
-			return
-		}
-	}
 }
