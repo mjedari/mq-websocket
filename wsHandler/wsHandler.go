@@ -1,8 +1,10 @@
 package wsHandler
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"websocket/authenticationService"
 	"websocket/configs"
 
 	"github.com/gorilla/websocket"
@@ -24,13 +26,15 @@ func WsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 	}
-
-	log.Println("Client Connected")
-	log.Println(ws.RemoteAddr())
-	err = ws.WriteMessage(1, []byte("Hi Client!"))
+	ctx := context.Background()
+	corolationId := "12" // TODO: set corolationId per request on websocket
+	userId, deviceId, err := authenticationService.Authenticate(r.Header, corolationId, ctx)
 	if err != nil {
-		log.Println(err)
+		CloseConnection(ws)
+		return
 	}
+	log.Println("userId: ", userId)
+	log.Println("deviceId: ", deviceId)
 
 	connections = append(connections, ws)
 	go reader(ws)
@@ -61,7 +65,7 @@ func reader(conn *websocket.Conn) {
 			return
 		}
 		// print out that message for clarity
-		log.Println(p)
+		log.Println(string(p))
 	}
 }
 

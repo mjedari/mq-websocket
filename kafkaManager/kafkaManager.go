@@ -2,6 +2,7 @@ package kafkaManager
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net"
 	"os"
@@ -9,13 +10,15 @@ import (
 	"websocket/configs"
 
 	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/protocol"
 )
 
 var Host string
 var Port string
 
 type KafkaMessage struct {
-	Value string
+	Value         string
+	CorrelationId string
 }
 
 func init() {
@@ -60,9 +63,46 @@ func Consume(ctx context.Context, topic string, group string, responseChan chan 
 		if err != nil {
 			continue
 		}
-		log.Println("message received", topic, string(msg.Value))
-		responseChan <- KafkaMessage{Value: string(msg.Value)}
+		headers, _ := json.Marshal(msg.Headers)
+		log.Println("message received", topic, string(msg.Value), string(headers), getCorrelationId(msg.Headers))
+		responseChan <- KafkaMessage{Value: string(msg.Value), CorrelationId: string(getCorrelationId(msg.Headers))}
 		go r.CommitMessages(ctx, msg)
+	}
+}
+
+func getCorrelationId(headers []protocol.Header) string {
+	for _, v := range headers {
+		if v.Key == configs.CORRELATION_ID_KEY {
+			return string(v.Value)
+		}
+	}
+	return ""
+}
+
+func Produce(ctx context.Context, topic string, key string, requestId string, message string, responseTopic string) {
+	w := &kafka.Writer{
+		Addr:        kafka.TCP(Host + ":" + Port),
+		Topic:       topic,
+		MaxAttempts: 1,
+		Balancer:    &kafka.LeastBytes{},
+		BatchSize:   1,
+	}
+	err := w.WriteMessages(ctx,
+		kafka.Message{
+			Key:   []byte(key),
+			Value: []byte(message),
+			Headers: []protocol.Header{
+				{Key: configs.CORRELATION_ID_KEY, Value: []byte(requestId)},
+				{Key: configs.WEBSOCKET_RESPONSE_KEY, Value: []byte(responseTopic)},
+			},
+		},
+	)
+	if err != nil {
+		log.Println("failed to write messages:", err)
+	}
+
+	if err := w.Close(); err != nil {
+		log.Println("failed to close", err)
 	}
 }
 
