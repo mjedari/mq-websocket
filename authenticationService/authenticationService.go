@@ -54,7 +54,7 @@ func Authenticate(headers http.Header, requestId string, ctx context.Context) (s
 			json.Unmarshal([]byte(resp), &respModel)
 			return respModel.Data.UserId, respModel.Data.DeviceId, nil
 		}
-	case <-time.After(20 * time.Second):
+	case <-time.After(configs.AuthTimeout * time.Second):
 		{
 			log.Println("Authentication server is down !!")
 			return "", "", errors.New("authentication timeout")

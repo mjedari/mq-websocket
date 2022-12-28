@@ -13,5 +13,6 @@ const WEBSOCKET_AUTHENTICATION_TOPIC = "websocket_authentication_topic"
 const CORRELATION_ID_KEY = "correlation_id"
 const AUTHENTICATION_TOPIC = "auth_public"
 const AUTHENTICATION_KEY = "get_device_id_by_headers"
+const AuthTimeout = 20
 
 const SENTRY_DSN = "https://5f3be1a360174839ae243a1f1344866d@o4503970402992128.ingest.sentry.io/4503970404302848"
