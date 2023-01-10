@@ -25,7 +25,7 @@ deploy-testing:
     - sleep 5
     - docker-compose -H "ssh://testing" top
   only:
-    - develop
+    - main
   tags:
     - websocket
   stage: deploy-testing
