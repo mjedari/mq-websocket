@@ -1,5 +1,15 @@
 package configs
 
+import "os"
+
+func get_env_or_default(_key string, _default string) string {
+	_val := os.Getenv(_key)
+	if _val == "" {
+		_val = _default
+	}
+	return _val
+}
+
 const ENVIRONMENT = "local"
 const DEBUG = true
 const WebSocketPublicTopic = "websocket_public_topic"

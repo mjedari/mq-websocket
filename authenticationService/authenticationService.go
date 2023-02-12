@@ -14,13 +14,33 @@ import (
 
 var channels sync.Map
 
-type Headers struct {
-	AccessToken string      `json:"access_token"`
-	Headers     http.Header `json:"headers"`
+type StandardHeader map[string]string
+
+func Standardize(headers http.Header) StandardHeader {
+	standard_headers := make(StandardHeader)
+	for key := range headers {
+		standard_headers[key] = headers.Get(key)
+	}
+	return standard_headers
+}
+
+type AuthFormat struct {
+	AccessToken string   `json:"access_token"`
+	MetaData    MetaData `json:"MetaData"`
+}
+
+type MetaData struct {
+	Headers StandardHeader `json:"headers"`
+	Ip      string         `json:"ip"`
 }
 
 type authenticationServerResponse struct {
-	Data authenticationData `json:"data"`
+	Data     authenticationData `json:"data"`
+	MetaData authenticationMetaData
+}
+
+type authenticationMetaData struct {
+	Headers map[string]any `json:"headers"`
 }
 
 type authenticationData struct {
@@ -33,10 +53,14 @@ func init() {
 }
 
 func Authenticate(headers http.Header, requestId string, ctx context.Context) (string, string, error) {
+	var respModel authenticationServerResponse
 	requestChannel := make(chan string)
 	channels.Store(requestId, requestChannel)
 	jsonValue, err := json.Marshal(
-		Headers{AccessToken: headers.Get("Authorization"), Headers: headers},
+		AuthFormat{
+			AccessToken: headers.Get("Authorization"),
+			MetaData:    MetaData{Headers: Standardize(headers), Ip: headers.Get("X-FORWARDED-FOR")},
+		},
 	)
 	if err != nil {
 		log.Println(err)
@@ -50,12 +74,12 @@ func Authenticate(headers http.Header, requestId string, ctx context.Context) (s
 	select {
 	case resp := <-requestChannel:
 		{
-			var respModel authenticationServerResponse
 			json.Unmarshal([]byte(resp), &respModel)
 			return respModel.Data.UserId, respModel.Data.DeviceId, nil
 		}
 	case <-time.After(configs.AuthTimeout * time.Second):
 		{
+			channels.Delete(requestId)
 			log.Println("Authentication server is down !!")
 			return "", "", errors.New("authentication timeout")
 		}
@@ -72,7 +96,7 @@ func consumeAuthenticationTopic() {
 			channel := c.(chan string)
 			channel <- kafkaMessage.Value
 		} else {
-			log.Println(c)
+			log.Println("request channel not found: ", kafkaMessage.CorrelationId)
 		}
 	}
 }
