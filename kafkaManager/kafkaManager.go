@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"time"
 	"websocket/configs"
 
 	"github.com/segmentio/kafka-go"
@@ -48,25 +47,24 @@ func CreateTopic(ctx context.Context, topic string) {
 }
 
 func Consume(ctx context.Context, topic string, group string, responseChan chan KafkaMessage) {
+	log.Println("consuming topic : ", topic, responseChan)
 	sp := Host + ":" + Port
 	readerconfig := kafka.ReaderConfig{
-		Brokers:        []string{sp},
-		Topic:          topic,
-		Partition:      0,
-		CommitInterval: time.Microsecond * 10,
-		GroupID:        configs.WebSocketKafkaGroup,
+		Brokers: []string{sp},
+		Topic:   topic,
+		GroupID: configs.WebSocketKafkaGroup,
 	}
 
 	r := kafka.NewReader(readerconfig)
 	for {
 		msg, err := r.ReadMessage(ctx)
 		if err != nil {
-			continue
+			log.Println("message err", err)
+			break
 		}
 		headers, _ := json.Marshal(msg.Headers)
 		log.Println("message received", topic, string(msg.Value), string(headers), getCorrelationId(msg.Headers))
 		responseChan <- KafkaMessage{Value: string(msg.Value), CorrelationId: string(getCorrelationId(msg.Headers))}
-		go r.CommitMessages(ctx, msg)
 	}
 }
 
