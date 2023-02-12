@@ -21,7 +21,7 @@ const WebSocketPort = "8080"
 const WEBSOCKET_RESPONSE_KEY = "websocket_response_topic"
 const WEBSOCKET_AUTHENTICATION_TOPIC = "websocket_authentication_topic"
 const CORRELATION_ID_KEY = "correlation_id"
-const AUTHENTICATION_TOPIC = "auth_public"
+const AUTHENTICATION_TOPIC = "auths_public"
 const AUTHENTICATION_KEY = "get_device_id_by_headers"
 const AuthTimeout = 20
 
