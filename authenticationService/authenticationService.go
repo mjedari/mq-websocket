@@ -74,6 +74,7 @@ func Authenticate(headers http.Header, requestId string, ctx context.Context) (s
 	select {
 	case resp := <-requestChannel:
 		{
+			log.Println("Authentication Response :", resp)
 			json.Unmarshal([]byte(resp), &respModel)
 			return respModel.Data.UserId, respModel.Data.DeviceId, nil
 		}
