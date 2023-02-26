@@ -1,14 +1,11 @@
 package wsHandler
 
 import (
-	"context"
 	"log"
 	"net/http"
 	"sync"
-	"websocket/authenticationService"
 	"websocket/configs"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -31,13 +28,15 @@ func WsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	go reader(ws)
 
-	ctx := context.Background()
-	correlationId := uuid.New().String()
-	userId, deviceId, err := authenticationService.Authenticate(r.Header, correlationId, ctx)
-	if err != nil {
-		CloseConnection(ws)
-		return
-	}
+	// ctx := context.Background()
+	// correlationId := uuid.New().String()
+	// userId, deviceId, err := authenticationService.Authenticate(r.Header, correlationId, ctx)
+	// if err != nil {
+	// CloseConnection(ws)
+	// return
+	// }
+	userId := "10"
+	deviceId := "12"
 	log.Println("userId: ", userId)
 	log.Println("deviceId: ", deviceId)
 	if len(userId) != 0 {
