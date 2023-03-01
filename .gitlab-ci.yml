@@ -19,11 +19,11 @@ deploy-testing:
     ABAN_BACKEND_DEBUG_MODE: "True"
   script:
     - docker login repo.abanicon.com:5050 -u gitlab-ci/cd -p${registery_pass}
-    - docker-compose -H "ssh://testing" pull
-    - docker-compose -H "ssh://testing" down
-    - docker-compose -H "ssh://testing" up -d
+    - COMPOSE_HTTP_TIMEOUT=120 docker-compose -H "ssh://testing" pull
+    - COMPOSE_HTTP_TIMEOUT=120 docker-compose -H "ssh://testing" down
+    - COMPOSE_HTTP_TIMEOUT=120 docker-compose -H "ssh://testing" up -d
     - sleep 5
-    - docker-compose -H "ssh://testing" top
+    - COMPOSE_HTTP_TIMEOUT=120 docker-compose -H "ssh://testing" top
   only:
     - main
   tags:
