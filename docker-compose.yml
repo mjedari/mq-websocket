@@ -1,6 +1,6 @@
 # Docker Compose file Reference (https://docs.docker.com/compose/compose-file/)
 
-version: '3'
+version: '3.5'
 
 # Define services
 services:
@@ -25,5 +25,5 @@ services:
 
 networks:
   default:
-    external:
-      name: main
+    name: main
+    external: true
