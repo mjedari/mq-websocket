@@ -4,8 +4,12 @@ stages:
   - build
   - deploy-testing
 
+variables:
+  BRANCH_NAME: ${BRANCH_NAME}
+
 build:
   script:
+    - BRANCH_NAME=`echo ${CI_COMMIT_REF_NAME} | sed 's/\//_/g'`
     - docker login repo.abanicon.com:5050 -u gitlab-ci/cd -p${registery_pass}
     - docker-compose build
     - docker-compose push
@@ -18,6 +22,7 @@ deploy-testing:
   variables:
     ABAN_BACKEND_DEBUG_MODE: "True"
   script:
+    - BRANCH_NAME=`echo ${CI_COMMIT_REF_NAME} | sed 's/\//_/g'`
     - docker login repo.abanicon.com:5050 -u gitlab-ci/cd -p${registery_pass}
     - COMPOSE_HTTP_TIMEOUT=120 docker-compose -H "ssh://testing" pull
     - COMPOSE_HTTP_TIMEOUT=120 docker-compose -H "ssh://testing" down

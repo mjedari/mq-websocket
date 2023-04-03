@@ -11,7 +11,7 @@ services:
     build:
       context: . # Use an image built from the specified dockerfile in the current directory.
       dockerfile: Dockerfile
-    image: repo.abanicon.com:5050/abantheter-microservices/websocket:${CI_COMMIT_REF_NAME}
+    image: repo.abanicon.com:5050/abantheter-microservices/websocket:${BRANCH_NAME}
     ports:
       - "8081:8080" # Forward the exposed port 8080 on the container to port 8080 on the host machine
     restart: unless-stopped
