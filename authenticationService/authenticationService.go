@@ -89,7 +89,7 @@ func Authenticate(headers http.Header, requestId string, ctx context.Context) (s
 
 func consumeAuthenticationTopic() {
 	userIdChannel := make(chan kafkaManager.KafkaMessage)
-	go kafkaManager.Consume(context.Background(), configs.WEBSOCKET_AUTHENTICATION_TOPIC, configs.AuthenticationKafkaGroup, userIdChannel)
+	go kafkaManager.Consume(context.Background(), configs.WEBSOCKET_AUTHENTICATION_TOPIC, userIdChannel)
 	for {
 		kafkaMessage := <-userIdChannel
 		c, ok := channels.Load(kafkaMessage.CorrelationId)

@@ -9,7 +9,7 @@ import (
 
 func ReceiveMessages() {
 	messagesChan := make(chan kafkaManager.KafkaMessage)
-	go kafkaManager.Consume(context.Background(), configs.WebSocketPublicTopic, configs.WebSocketKafkaGroup, messagesChan)
+	go kafkaManager.Consume(context.Background(), configs.WebSocketPublicTopic, messagesChan)
 
 	for {
 		resp := <-messagesChan
