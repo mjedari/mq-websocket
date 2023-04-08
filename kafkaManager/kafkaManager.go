@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 	"websocket/configs"
 
 	"github.com/segmentio/kafka-go"
@@ -50,9 +51,10 @@ func Consume(ctx context.Context, topic string, group string, responseChan chan 
 	log.Println("consuming topic : ", topic, responseChan)
 	sp := Host + ":" + Port
 	readerconfig := kafka.ReaderConfig{
-		Brokers: []string{sp},
-		Topic:   topic,
-		GroupID: configs.WebSocketKafkaGroup,
+		Brokers:       []string{sp},
+		Topic:         topic,
+		GroupID:       configs.WebSocketKafkaGroup,
+		RetentionTime: time.Second,
 	}
 
 	r := kafka.NewReader(readerconfig)
