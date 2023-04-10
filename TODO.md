@@ -5,4 +5,5 @@ codes. [here](https://kapeli.com/cheat_sheets/WebSocket_Status_Codes.docset/Cont
 
 2. Restruct project
 3. Error handling
-4. 
+4. Log kafka related logs into a seperated log file [here](https://github.com/confluentinc/librdkafka/issues/3468#issuecomment-1016289114)
+5. Add this useful links to project readme [Kafka Docker Quick Start](https://developer.confluent.io/quickstart/kafka-docker/)

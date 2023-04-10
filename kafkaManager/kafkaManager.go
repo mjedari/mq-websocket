@@ -44,8 +44,11 @@ func CreateTopic(ctx context.Context, topics []string, partitions, replicationFa
 	}
 
 	newAdmin, err := kafka.NewAdminClient(&kafka.ConfigMap{
-		"bootstrap.servers": Host + ":" + Port,
+		"bootstrap.servers":     Host + ":" + Port,
+		"broker.address.family": "v4",
+		"debug":                 "broker,protocol,feature",
 	})
+	defer newAdmin.Close()
 
 	result, err := newAdmin.CreateTopics(ctx, topicConfigs)
 	if err != nil && len(result) == 0 {
@@ -67,6 +70,7 @@ func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage) 
 	}
 
 	defer func() {
+		logrus.Info("closing consumer...\n")
 		if closeErr := consumer.Close(); closeErr != nil {
 			logrus.Error("failed to close consumer:", closeErr)
 		}
@@ -77,12 +81,14 @@ func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage) 
 		logrus.Error("failed to close subscriber:", subscribeErr)
 	}
 
+	// ToDo: change the code https://github.com/confluentinc/confluent-kafka-go/blob/master/examples/consumer_example/consumer_example.go
 	for {
 		select {
 		case <-ctx.Done():
 			return
 
 		default:
+			// ToDO: use switch case to handle err and messages
 			msg, readErr := consumer.ReadMessage(-1)
 			if readErr != nil {
 				logrus.Errorf("read message error on topic %s: %v\n", topic, err)
@@ -117,9 +123,9 @@ func Produce(ctx context.Context, message ProduceMessage) {
 
 	newMessage := kafka.Message{
 		TopicPartition: kafka.TopicPartition{Topic: &message.Topic, Partition: kafka.PartitionAny},
+		Key:            []byte(message.Key),
 		Value:          []byte(message.Message),
 		Headers:        generateMessageHeaders(message.RequestId, message.ResponseTopic),
-		Key:            []byte(message.Key),
 	}
 
 	if err := producer.Produce(&newMessage, nil); err != nil {
@@ -146,9 +152,10 @@ func SetKafkaServerAddress() {
 
 func createNewConsumer() (*kafka.Consumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": Host + ":" + Port,
-		"group.id":          configs.WebSocketKafkaGroup,
-		"auto.offset.reset": "earliest",
+		"bootstrap.servers":     Host + ":" + Port,
+		"group.id":              configs.WebSocketKafkaGroup,
+		"auto.offset.reset":     "earliest",
+		"broker.address.family": "v4",
 	})
 
 	if err != nil {
