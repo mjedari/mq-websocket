@@ -8,7 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"log"
 	"os"
-	"time"
 	"websocket/configs"
 )
 
@@ -82,27 +81,51 @@ func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage) 
 		logrus.Error("failed to close subscriber:", subscribeErr)
 	}
 
+	run := true
 	// ToDo: change the code https://github.com/confluentinc/confluent-kafka-go/blob/master/examples/consumer_example/consumer_example.go
-	for {
+	for run == true {
 		select {
 		case <-ctx.Done():
 			return
 
 		default:
-			// ToDO: use switch case to handle err and messages
-			msg, readErr := consumer.ReadMessage(time.Second)
-			if readErr != nil {
-				logrus.Errorf("read message error on topic %s: %v\n", topic, err)
+			//// ToDO: use switch case to handle err and messages
+			//msg, readErr := consumer.ReadMessage(time.Second)
+			//if readErr != nil {
+			//	logrus.Errorf("read message error on topic %s: %v\n", topic, err)
+			//	continue
+			//}
+			//message := KafkaMessage{
+			//	Value:         string(msg.Value),
+			//	CorrelationId: getCorrelationId(msg.Headers),
+			//}
+			//
+			//headers, _ := json.Marshal(msg.Headers)
+			//log.Println("message received", topic, string(msg.Value), string(headers), getCorrelationId(msg.Headers))
+			//responseChan <- message
+			ev := consumer.Poll(100)
+			if ev == nil {
 				continue
 			}
-			message := KafkaMessage{
-				Value:         string(msg.Value),
-				CorrelationId: getCorrelationId(msg.Headers),
-			}
 
-			headers, _ := json.Marshal(msg.Headers)
-			log.Println("message received", topic, string(msg.Value), string(headers), getCorrelationId(msg.Headers))
-			responseChan <- message
+			switch e := ev.(type) {
+			case *kafka.Message:
+				message := KafkaMessage{
+					Value:         string(e.Value),
+					CorrelationId: getCorrelationId(e.Headers),
+				}
+				headers, _ := json.Marshal(e.Headers)
+				log.Println("message received", topic, string(e.Value), string(headers), getCorrelationId(e.Headers))
+				responseChan <- message
+
+			case kafka.Error:
+				fmt.Fprintf(os.Stderr, "%% Error: %v: %v\n", e.Code(), e)
+				if e.Code() == kafka.ErrAllBrokersDown {
+					run = false
+				}
+			default:
+				fmt.Printf("Ignored %v\n", e)
+			}
 		}
 	}
 }
