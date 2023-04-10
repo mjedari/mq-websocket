@@ -92,7 +92,7 @@ func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage) 
 			msg, readErr := consumer.ReadMessage(-1)
 			if readErr != nil {
 				logrus.Errorf("read message error on topic %s: %v\n", topic, err)
-				break
+				continue
 			}
 			message := KafkaMessage{
 				Value:         string(msg.Value),
