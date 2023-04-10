@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
 	"time"
@@ -50,5 +51,8 @@ func InitSentry() {
 
 func CreateTopics() {
 	ctx := context.Background()
-	kafkaManager.CreateTopic(ctx, configs.WebSocketPublicTopic)
+	if err := kafkaManager.CreateTopic(ctx, []string{configs.WebSocketPublicTopic}, 1, 1); err != nil {
+		logrus.Error("can not create topic: ", configs.WebSocketPublicTopic)
+		panic(err)
+	}
 }

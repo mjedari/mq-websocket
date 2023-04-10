@@ -66,11 +66,16 @@ func Authenticate(headers http.Header, requestId string, ctx context.Context) (s
 		log.Println(err)
 		return "", "", err
 	}
-	go kafkaManager.Produce(
-		ctx, configs.AUTHENTICATION_TOPIC,
-		configs.AUTHENTICATION_KEY, requestId, string(jsonValue),
-		configs.WEBSOCKET_AUTHENTICATION_TOPIC,
-	)
+
+	message := kafkaManager.ProduceMessage{
+		Topic:         configs.AUTHENTICATION_TOPIC,
+		Key:           configs.AUTHENTICATION_KEY,
+		RequestId:     requestId,
+		Message:       string(jsonValue),
+		ResponseTopic: configs.WEBSOCKET_AUTHENTICATION_TOPIC,
+	}
+	go kafkaManager.Produce(ctx, message)
+
 	select {
 	case resp := <-requestChannel:
 		{
@@ -89,7 +94,7 @@ func Authenticate(headers http.Header, requestId string, ctx context.Context) (s
 
 func consumeAuthenticationTopic() {
 	userIdChannel := make(chan kafkaManager.KafkaMessage)
-	go kafkaManager.Consume(context.Background(), configs.WEBSOCKET_AUTHENTICATION_TOPIC, configs.AuthenticationKafkaGroup, userIdChannel)
+	go kafkaManager.Consume(context.Background(), configs.WEBSOCKET_AUTHENTICATION_TOPIC, userIdChannel)
 	for {
 		kafkaMessage := <-userIdChannel
 		c, ok := channels.Load(kafkaMessage.CorrelationId)

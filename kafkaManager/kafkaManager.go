@@ -3,14 +3,12 @@ package kafkaManager
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/sirupsen/logrus"
 	"log"
-	"net"
 	"os"
-	"time"
 	"websocket/configs"
-
-	"github.com/segmentio/kafka-go"
-	"github.com/segmentio/kafka-go/protocol"
 )
 
 var Host string
@@ -21,56 +19,94 @@ type KafkaMessage struct {
 	CorrelationId string
 }
 
+type ProduceMessage struct {
+	Topic         string
+	Key           string
+	RequestId     string
+	Message       string
+	ResponseTopic string
+}
+
 func init() {
 	SetKafkaServerAddress()
 }
 
-func CreateTopic(ctx context.Context, topic string) {
-	var controllerConn *kafka.Conn
-	controllerConn, err := kafka.Dial("tcp", net.JoinHostPort(Host, Port))
-	if err != nil {
-		log.Println(err.Error())
-	}
-	defer controllerConn.Close()
+func CreateTopic(ctx context.Context, topics []string, partitions, replicationFactor int) error {
+	var topicConfigs []kafka.TopicSpecification
 
-	topicConfigs := []kafka.TopicConfig{
-		{
+	for _, topic := range topics {
+		t := kafka.TopicSpecification{
 			Topic:             topic,
-			NumPartitions:     1,
-			ReplicationFactor: 1,
-		},
-	}
-
-	err = controllerConn.CreateTopics(topicConfigs...)
-	if err != nil {
-		log.Println(err.Error())
-	}
-}
-
-func Consume(ctx context.Context, topic string, group string, responseChan chan KafkaMessage) {
-	log.Println("consuming topic : ", topic, responseChan)
-	sp := Host + ":" + Port
-	readerconfig := kafka.ReaderConfig{
-		Brokers:       []string{sp},
-		Topic:         topic,
-		GroupID:       configs.WebSocketKafkaGroup,
-		RetentionTime: time.Second,
-	}
-
-	r := kafka.NewReader(readerconfig)
-	for {
-		msg, err := r.ReadMessage(ctx)
-		if err != nil {
-			log.Println("message err", err)
-			break
+			NumPartitions:     partitions,
+			ReplicationFactor: replicationFactor,
 		}
-		headers, _ := json.Marshal(msg.Headers)
-		log.Println("message received", topic, string(msg.Value), string(headers), getCorrelationId(msg.Headers))
-		responseChan <- KafkaMessage{Value: string(msg.Value), CorrelationId: string(getCorrelationId(msg.Headers))}
+		topicConfigs = append(topicConfigs, t)
+	}
+
+	newAdmin, err := kafka.NewAdminClient(&kafka.ConfigMap{
+		"bootstrap.servers":     Host + ":" + Port,
+		"broker.address.family": "v4",
+		"debug":                 "broker,protocol,feature",
+	})
+	defer newAdmin.Close()
+
+	result, err := newAdmin.CreateTopics(ctx, topicConfigs)
+	if err != nil && len(result) == 0 {
+		log.Println(err)
+		panic(fmt.Sprintf("error in topic creation: %s", err.Error()))
+	}
+
+	logrus.Info("topics were created: ", topics)
+	return nil
+}
+
+func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage) {
+	logrus.Infof("consuming topic %s: %v \n", topic, responseChan)
+
+	consumer, err := createNewConsumer()
+	if err != nil {
+		log.Println("error in consuming topic", topic, err)
+		panic(err)
+	}
+
+	defer func() {
+		logrus.Info("closing consumer...\n")
+		if closeErr := consumer.Close(); closeErr != nil {
+			logrus.Error("failed to close consumer:", closeErr)
+		}
+	}()
+
+	if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
+		// subscribeErr
+		logrus.Error("failed to close subscriber:", subscribeErr)
+	}
+
+	// ToDo: change the code https://github.com/confluentinc/confluent-kafka-go/blob/master/examples/consumer_example/consumer_example.go
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		default:
+			// ToDO: use switch case to handle err and messages
+			msg, readErr := consumer.ReadMessage(-1)
+			if readErr != nil {
+				logrus.Errorf("read message error on topic %s: %v\n", topic, err)
+				break
+			}
+			message := KafkaMessage{
+				Value:         string(msg.Value),
+				CorrelationId: getCorrelationId(msg.Headers),
+			}
+
+			headers, _ := json.Marshal(msg.Headers)
+			log.Println("message received", topic, string(msg.Value), string(headers), getCorrelationId(msg.Headers))
+			responseChan <- message
+		}
 	}
 }
 
-func getCorrelationId(headers []protocol.Header) string {
+func getCorrelationId(headers []kafka.Header) string {
 	for _, v := range headers {
 		if v.Key == configs.CORRELATION_ID_KEY {
 			return string(v.Value)
@@ -79,31 +115,26 @@ func getCorrelationId(headers []protocol.Header) string {
 	return ""
 }
 
-func Produce(ctx context.Context, topic string, key string, requestId string, message string, responseTopic string) {
-	w := &kafka.Writer{
-		Addr:        kafka.TCP(Host + ":" + Port),
-		Topic:       topic,
-		MaxAttempts: 1,
-		Balancer:    &kafka.LeastBytes{},
-		BatchSize:   1,
-	}
-	err := w.WriteMessages(ctx,
-		kafka.Message{
-			Key:   []byte(key),
-			Value: []byte(message),
-			Headers: []protocol.Header{
-				{Key: configs.CORRELATION_ID_KEY, Value: []byte(requestId)},
-				{Key: configs.WEBSOCKET_RESPONSE_KEY, Value: []byte(responseTopic)},
-			},
-		},
-	)
-	if err != nil {
-		log.Println("failed to write messages:", err)
+func Produce(ctx context.Context, message ProduceMessage) {
+	producer, pErr := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": Host + ":" + Port})
+	if pErr != nil {
+		panic(pErr)
 	}
 
-	if err := w.Close(); err != nil {
-		log.Println("failed to close", err)
+	newMessage := kafka.Message{
+		TopicPartition: kafka.TopicPartition{Topic: &message.Topic, Partition: kafka.PartitionAny},
+		Key:            []byte(message.Key),
+		Value:          []byte(message.Message),
+		Headers:        generateMessageHeaders(message.RequestId, message.ResponseTopic),
 	}
+
+	if err := producer.Produce(&newMessage, nil); err != nil {
+		log.Print("failed to write messages:", err)
+	}
+
+	defer producer.Close()
+
+	producer.Flush(15 * 1000)
 }
 
 func SetKafkaServerAddress() {
@@ -116,5 +147,26 @@ func SetKafkaServerAddress() {
 	if Port == "" {
 		Port = "9092"
 		log.Println("Using default kafka port")
+	}
+}
+
+func createNewConsumer() (*kafka.Consumer, error) {
+	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
+		"bootstrap.servers":     Host + ":" + Port,
+		"group.id":              configs.WebSocketKafkaGroup,
+		"auto.offset.reset":     "earliest",
+		"broker.address.family": "v4",
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return consumer, nil
+}
+
+func generateMessageHeaders(requestId string, responseTopic string) []kafka.Header {
+	return []kafka.Header{
+		{Key: configs.CORRELATION_ID_KEY, Value: []byte(requestId)},
+		{Key: configs.WEBSOCKET_RESPONSE_KEY, Value: []byte(responseTopic)},
 	}
 }
