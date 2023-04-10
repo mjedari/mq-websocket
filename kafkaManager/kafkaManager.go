@@ -176,10 +176,12 @@ func SetKafkaServerAddress() {
 
 func createNewConsumer() (*kafka.Consumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":     Host + ":" + Port,
-		"group.id":              configs.WebSocketKafkaGroup,
-		"auto.offset.reset":     "earliest",
-		"broker.address.family": "v4",
+		"bootstrap.servers":        Host + ":" + Port,
+		"group.id":                 configs.WebSocketKafkaGroup,
+		"auto.offset.reset":        "earliest",
+		"broker.address.family":    "v4",
+		"enable.auto.offset.store": false,
+		"session.timeout.ms":       6000,
 	})
 
 	if err != nil {
