@@ -23,7 +23,7 @@ RUN go mod download
 COPY . .
 
 # Build the Go app
-RUN go build main.go -tags musl
+RUN go build -o main -tags musl
 
 # Expose port 8080 to the outside world
 EXPOSE 8080
