@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"log"
 	"os"
+	"time"
 	"websocket/configs"
 )
 
@@ -89,7 +90,7 @@ func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage) 
 
 		default:
 			// ToDO: use switch case to handle err and messages
-			msg, readErr := consumer.ReadMessage(-1)
+			msg, readErr := consumer.ReadMessage(time.Second)
 			if readErr != nil {
 				logrus.Errorf("read message error on topic %s: %v\n", topic, err)
 				continue
