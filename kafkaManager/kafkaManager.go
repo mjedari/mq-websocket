@@ -11,6 +11,9 @@ import (
 	"websocket/configs"
 )
 
+const PollingTimeout = 100  // unit: ms
+const NumberOfConsumers = 1 // unit: ms
+
 var Host string
 var Port string
 
@@ -63,68 +66,49 @@ func CreateTopic(ctx context.Context, topics []string, partitions, replicationFa
 func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage) {
 	logrus.Infof("consuming topic %s: %v \n", topic, responseChan)
 
-	consumer, err := createNewConsumer()
-	if err != nil {
-		log.Println("error in consuming topic", topic, err)
-		panic(err)
-	}
-
-	defer func() {
-		logrus.Info("closing consumer...\n")
-		if closeErr := consumer.Close(); closeErr != nil {
-			logrus.Error("failed to close consumer:", closeErr)
+	for {
+		run := true
+		consumer, err := createNewConsumer()
+		if err != nil {
+			log.Println("error in consuming topic", topic, err)
+			panic(err)
 		}
-	}()
 
-	if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
-		// subscribeErr
-		logrus.Error("failed to close subscriber:", subscribeErr)
-	}
+		if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
+			logrus.Error("failed to close subscriber:", subscribeErr)
+		}
 
-	run := true
-	// ToDo: change the code https://github.com/confluentinc/confluent-kafka-go/blob/master/examples/consumer_example/consumer_example.go
-	for run == true {
-		select {
-		case <-ctx.Done():
-			return
+		for run == true {
+			select {
+			case <-ctx.Done():
+				return
 
-		default:
-			//// ToDO: use switch case to handle err and messages
-			//msg, readErr := consumer.ReadMessage(time.Second)
-			//if readErr != nil {
-			//	logrus.Errorf("read message error on topic %s: %v\n", topic, err)
-			//	continue
-			//}
-			//message := KafkaMessage{
-			//	Value:         string(msg.Value),
-			//	CorrelationId: getCorrelationId(msg.Headers),
-			//}
-			//
-			//headers, _ := json.Marshal(msg.Headers)
-			//log.Println("message received", topic, string(msg.Value), string(headers), getCorrelationId(msg.Headers))
-			//responseChan <- message
-			ev := consumer.Poll(100)
-			if ev == nil {
-				continue
-			}
-
-			switch e := ev.(type) {
-			case *kafka.Message:
-				message := KafkaMessage{
-					Value:         string(e.Value),
-					CorrelationId: getCorrelationId(e.Headers),
-				}
-				headers, _ := json.Marshal(e.Headers)
-				log.Println("message received", topic, string(e.Value), string(headers), getCorrelationId(e.Headers))
-				responseChan <- message
-
-			case kafka.Error:
-				fmt.Fprintf(os.Stderr, "%% Error: %v: %v\n", e.Code(), e)
-				if e.Code() == kafka.ErrAllBrokersDown {
-					run = false
-				}
 			default:
-				fmt.Printf("Ignored %v\n", e)
+				ev := consumer.Poll(PollingTimeout)
+				fmt.Println("called poll from consumer: ", consumer)
+				if ev == nil {
+					fmt.Println("poll is nil: next iteration")
+					continue
+				}
+
+				switch e := ev.(type) {
+				case *kafka.Message:
+					message := KafkaMessage{
+						Value:         string(e.Value),
+						CorrelationId: getCorrelationId(e.Headers),
+					}
+					headers, _ := json.Marshal(e.Headers)
+					log.Println("message received", topic, string(e.Value), string(headers), getCorrelationId(e.Headers))
+					responseChan <- message
+
+				case kafka.Error:
+					fmt.Fprintf(os.Stderr, "%% Error: %v: %v\n", e.Code(), e)
+					run = false
+					consumer.Close()
+					fmt.Printf("closeing consumer...")
+				default:
+					fmt.Printf("Ignored %v\n", e)
+				}
 			}
 		}
 	}
@@ -176,17 +160,18 @@ func SetKafkaServerAddress() {
 
 func createNewConsumer() (*kafka.Consumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":        Host + ":" + Port,
-		"group.id":                 configs.WebSocketKafkaGroup,
-		"auto.offset.reset":        "earliest",
-		"broker.address.family":    "v4",
-		"enable.auto.offset.store": false,
-		"session.timeout.ms":       6000,
+		"bootstrap.servers":     Host + ":" + Port,
+		"group.id":              configs.WebSocketKafkaGroup,
+		"auto.offset.reset":     "latest",
+		"broker.address.family": "v4",
+		"max.poll.interval.ms":  600000,
 	})
 
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("create new consumer: %v\n", consumer)
 	return consumer, nil
 }
 
