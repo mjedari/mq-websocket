@@ -11,6 +11,7 @@ codes. [here](https://kapeli.com/cheat_sheets/WebSocket_Status_Codes.docset/Cont
    * [Kafka Go Client](https://docs.confluent.io/kafka-clients/go/current/overview.html#ak-go)
    * [Long running jobs](https://medium.com/codex/dealing-with-long-running-jobs-using-apache-kafka-192f053e1691)
    * [7 mistakes of using kafka](https://blog.softwaremill.com/7-mistakes-when-using-apache-kafka-44358cd9cd6)
+   * [Configuration of kafka for confluent platform](https://docs.confluent.io/platform/current/installation/configuration/consumer-configs.html#max-partition-fetch-bytes)
 
 
 

@@ -85,9 +85,7 @@ func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage) 
 
 			default:
 				ev := consumer.Poll(PollingTimeout)
-				fmt.Println("called poll from consumer: ", consumer)
 				if ev == nil {
-					fmt.Println("poll is nil: next iteration")
 					continue
 				}
 

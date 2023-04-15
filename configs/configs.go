@@ -13,6 +13,7 @@ func get_env_or_default(_key string, _default string) string {
 const ENVIRONMENT = "local"
 const DEBUG = true
 const WebSocketPublicTopic = "websocket_public_topic"
+const WebSocketPrivateTopic = "websocket_private_topic"
 const WebSocketKafkaGroup = "websocket_group"
 const AuthenticationKafkaGroup = "authentication_group"
 const ReadBufferSize = 1024
