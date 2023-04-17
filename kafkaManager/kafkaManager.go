@@ -101,9 +101,13 @@ func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage) 
 
 				case kafka.Error:
 					fmt.Fprintf(os.Stderr, "%% Error: %v: %v\n", e.Code(), e)
-					run = false
-					consumer.Close()
-					fmt.Printf("closeing consumer...")
+
+					if e.Code() == kafka.ErrMaxPollExceeded {
+						run = false
+						consumer.Close()
+						fmt.Printf("closeing consumer...")
+					}
+
 				default:
 					fmt.Printf("Ignored %v\n", e)
 				}

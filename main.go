@@ -19,12 +19,12 @@ func main() {
 	CreateTopics() // create required websocket topics
 	go publicMessageManager.ReceiveMessages()
 
-	http.HandleFunc("/", wsHandler.WsHandler)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", wsHandler.WsHandler)
+	privateSocketHandler := wsHandler.LoggerMiddleware(wsHandler.PrivateChannelMiddleware(wsHandler.NewPrivateHandler()))
+	mux.Handle("/private", privateSocketHandler)
 
-	privateSocketHandler := wsHandler.PrivateChannelMiddleware(wsHandler.LoggerMiddleware(wsHandler.NewPrivateHandler()))
-	http.Handle("/private", privateSocketHandler)
-
-	err := http.ListenAndServe(":"+configs.WebSocketPort, nil)
+	err := http.ListenAndServe(":"+configs.WebSocketPort, mux)
 	if err != nil {
 		log.Fatal(err)
 		sentry.CaptureException(err)

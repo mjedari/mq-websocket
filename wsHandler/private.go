@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 	"websocket/configs"
-	"websocket/kafkaManager"
 )
 
 var privateConnections sync.Map
@@ -27,10 +26,25 @@ func (p *PrivateHandler) ServeHTTP(responseWriter http.ResponseWriter, request *
 	userId := ctx.Value("user_id")
 
 	fmt.Println("user id read from context", userId)
-	return
-	// here we should start to consume user topic
-	privateMessagesChan := make(chan kafkaManager.KafkaMessage)
-	go kafkaManager.Consume(ctx, configs.WebSocketPrivateTopic, privateMessagesChan)
+	//return
+
+	//go func() {
+	//	// here we should start to consume user topic
+	//	privateMessagesChan := make(chan kafkaManager.KafkaMessage)
+	//	go kafkaManager.Consume(ctx, p.GetBrokerTopic(), privateMessagesChan)
+	//
+	//	for {
+	//		resp := <-privateMessagesChan
+	//		p.WriteMessage(resp.Value)
+	//	}
+	//}()
+
+	go func() {
+		for {
+			<-time.Tick(time.Second * 2)
+			p.WriteMessage("Hi this is message")
+		}
+	}()
 
 	// todo: remove this
 	time.Sleep(time.Second * 2)
@@ -42,7 +56,9 @@ func (p *PrivateHandler) ServeHTTP(responseWriter http.ResponseWriter, request *
 		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
 		return
 	}
+	//go reader(webSocket)
 
+	fmt.Println("request upgrated")
 	//userId := "10"
 	// user id should be an uuid
 
@@ -56,24 +72,24 @@ func (p *PrivateHandler) ServeHTTP(responseWriter http.ResponseWriter, request *
 
 }
 
-func (p *PrivateHandler) GetChannelType() string {
-	return "private"
+func (p *PrivateHandler) GetBrokerTopic() string {
+	return configs.WebSocketPublicTopic
 }
 
 func (p *PrivateHandler) WriteMessage(message string) {
 	privateConnections.Range(func(key, value interface{}) bool {
 		for _, conn := range value.([]*websocket.Conn) {
-			p.writeToSocket(conn, message)
+			p.writeToSocket(conn, "1", message)
 		}
 		return true
 	})
 }
 
-func (p *PrivateHandler) writeToSocket(socketConn *websocket.Conn, msg string) {
-	messageByte := []byte(msg)
-	messageType := 1
-	if err := socketConn.WriteMessage(messageType, messageByte); err != nil {
+func (p *PrivateHandler) writeToSocket(socketConn *websocket.Conn, userId, message string) {
+	messageByte := []byte(message)
+	if err := socketConn.WriteMessage(websocket.TextMessage, messageByte); err != nil {
 		log.Println(err)
 		return
 	}
+	fmt.Printf("message sent to user: %v \n", userId)
 }
