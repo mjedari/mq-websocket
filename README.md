@@ -1,5 +1,36 @@
 # websocket
 
+### Private channel request
+
+#### Client side
+
+to communicate with channel, you must subscribe to channel with the below format. If you want unsubscribe just change
+the action to `unsubscribe`.
+*Although to authenticate, client should send token like other P2P services in the header. 
+
+```js
+const WebSocket = require('ws');
+
+var socket = new WebSocket("ws://localhost:8000/private");
+socket.onopen = () => {
+    socket.send(JSON.stringify({"action": "subscribe", "channel": "channel-name", "data": "this is optional."}))
+    socket.send(JSON.stringify({"action": "unsubscribe", "channel": "channel-name", "data": "this is optional."}))
+}
+```
+#### Backend side
+The kafka message format for a specific channel should be in the this format:
+```json
+header = {
+  "user-id" : "123414"
+}
+
+key = "channel-name"
+
+value = {
+  ...
+}
+```
+
 ### Sample message from `websocket_public_topic`
 
 ```js
