@@ -1,4 +1,4 @@
-package wsHandler
+package handler
 
 import (
 	"context"
@@ -21,13 +21,6 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 
 func PrivateChannelMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// authenticate here
-		// => how?
-		// produce a message to auth server
-		//	=> wait to get it is allowed or not
-		//		=> then allow to establish a connection
-		//		=> or then close connection
-
 		fmt.Println("Got authentication middleware")
 		correlationId := uuid.New().String()
 		ctx := r.Context()

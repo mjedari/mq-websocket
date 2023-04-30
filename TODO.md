@@ -18,4 +18,7 @@ codes. [here](https://kapeli.com/cheat_sheets/WebSocket_Status_Codes.docset/Cont
 ### What to do for error:
 * I can use streaming instead of consumer
 * I can use a group of consumers (alt least 2 consumers to hand over partitions if the previous one is dead)
-* 
+
+
+### Private Channel:
+* We should add timeout mechanize to remove zombie connections therough the life of web socket

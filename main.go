@@ -9,6 +9,8 @@ import (
 	"websocket/configs"
 	"websocket/kafkaManager"
 	"websocket/publicMessageManager"
+	"websocket/refactor/handler"
+	"websocket/refactor/hub"
 	"websocket/wsHandler"
 
 	"github.com/getsentry/sentry-go"
@@ -17,11 +19,19 @@ import (
 func main() {
 	InitSentry()
 	CreateTopics() // create required websocket topics
-	go publicMessageManager.ReceiveMessages()
+	privateChan := make(chan hub.PrivateMessage)
+
+	go publicMessageManager.ReceiveMessages(privateChan)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", wsHandler.WsHandler)
-	privateSocketHandler := wsHandler.LoggerMiddleware(wsHandler.PrivateChannelMiddleware(wsHandler.NewPrivateHandler()))
+
+	newHub := hub.NewHub()
+	channelHandler := handler.NewChannelHandler(newHub)
+	privateSocketHandler := handler.LoggerMiddleware(handler.PrivateChannelMiddleware(channelHandler))
+
+	go newHub.Streaming(privateChan)
+
 	mux.Handle("/private", privateSocketHandler)
 
 	err := http.ListenAndServe(":"+configs.WebSocketPort, mux)

@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"websocket/configs"
+	"websocket/refactor/hub"
 )
 
 const PollingTimeout = 100  // unit: ms
@@ -63,7 +64,7 @@ func CreateTopic(ctx context.Context, topics []string, partitions, replicationFa
 	return nil
 }
 
-func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage) {
+func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage, privateChan chan hub.PrivateMessage) {
 	logrus.Infof("consuming topic %s: %v \n", topic, responseChan)
 
 	for {
@@ -95,6 +96,20 @@ func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage) 
 						Value:         string(e.Value),
 						CorrelationId: getCorrelationId(e.Headers),
 					}
+
+					userId := getUserId(e.Headers)
+					if userId != nil {
+						fmt.Println("this is private message")
+						msg := hub.PrivateMessage{
+							UserId:  getUserId(e.Headers),
+							Room:    e.Key,
+							Message: e.Value,
+						}
+
+						privateChan <- msg
+						continue
+					}
+
 					headers, _ := json.Marshal(e.Headers)
 					log.Println("message received", topic, string(e.Value), string(headers), getCorrelationId(e.Headers))
 					responseChan <- message
@@ -125,6 +140,14 @@ func getCorrelationId(headers []kafka.Header) string {
 	return ""
 }
 
+func getUserId(headers []kafka.Header) []byte {
+	for _, v := range headers {
+		if v.Key == "user-id" {
+			return v.Value
+		}
+	}
+	return nil
+}
 func Produce(ctx context.Context, message ProduceMessage) {
 	producer, pErr := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": Host + ":" + Port})
 	if pErr != nil {

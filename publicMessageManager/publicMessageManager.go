@@ -4,12 +4,13 @@ import (
 	"context"
 	"websocket/configs"
 	"websocket/kafkaManager"
+	"websocket/refactor/hub"
 	"websocket/wsHandler"
 )
 
-func ReceiveMessages() {
+func ReceiveMessages(privateChan chan hub.PrivateMessage) {
 	messagesChan := make(chan kafkaManager.KafkaMessage)
-	go kafkaManager.Consume(context.Background(), configs.WebSocketPublicTopic, messagesChan)
+	go kafkaManager.Consume(context.Background(), configs.WebSocketPublicTopic, messagesChan, privateChan)
 
 	for {
 		resp := <-messagesChan

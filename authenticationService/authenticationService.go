@@ -53,7 +53,7 @@ func init() {
 }
 
 func Authenticate(headers http.Header, requestId string, ctx context.Context) (string, string, error) {
-	return "1", "1-2-3-4-5", nil
+	//return "1", "1-2-3-4-5", nil
 
 	var respModel authenticationServerResponse
 	requestChannel := make(chan string)
@@ -96,7 +96,7 @@ func Authenticate(headers http.Header, requestId string, ctx context.Context) (s
 
 func consumeAuthenticationTopic() {
 	userIdChannel := make(chan kafkaManager.KafkaMessage)
-	go kafkaManager.Consume(context.Background(), configs.WEBSOCKET_AUTHENTICATION_TOPIC, userIdChannel)
+	go kafkaManager.Consume(context.Background(), configs.WEBSOCKET_AUTHENTICATION_TOPIC, userIdChannel, nil)
 	for {
 		kafkaMessage := <-userIdChannel
 		c, ok := channels.Load(kafkaMessage.CorrelationId)
