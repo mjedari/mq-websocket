@@ -12,10 +12,15 @@ the action to `unsubscribe`.
 const WebSocket = require('ws');
 
 var socket = new WebSocket("ws://localhost:8000/private");
+
 socket.onopen = () => {
     socket.send(JSON.stringify({"action": "subscribe", "channel": "channel-name", "data": "this is optional."}))
-    socket.send(JSON.stringify({"action": "unsubscribe", "channel": "channel-name", "data": "this is optional."}))
+    //socket.send(JSON.stringify({"action": "unsubscribe", "channel": "channel-name", "data": "this is optional."}))
 }
+
+socket.onmessage = function (event) {
+    console.log(event.data)
+};
 ```
 #### Backend side
 The kafka message format for a specific channel should be in the this format:
