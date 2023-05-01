@@ -4,9 +4,16 @@
 
 #### Client side
 
-to communicate with channel, you must subscribe to channel with the below format. If you want unsubscribe just change
-the action to `unsubscribe`.
-*Although to authenticate, client should send token like other P2P services in the header. 
+To communicate with channel, you must subscribe to the channel by publishing a message with specific format.
+```json
+{
+  "action" : "subscribe",
+  "channel" : "channel-name"
+}
+```
+If you want unsubscribe just change the action to `unsubscribe`.
+
+*Although to authenticate, client should send `token` like other P2P services in the header. 
 
 ```js
 const WebSocket = require('ws');
@@ -23,10 +30,13 @@ socket.onmessage = function (event) {
 };
 ```
 #### Backend side
-The kafka message format for a specific channel should be in the this format:
+The kafka message format for a specific channel should be in the below format.
+`user_id` should be passed into the message's header and service name (which is `channel-name`) should be the key of the messages.
+All `user_id` provided messages would be considered as a *private message*:
 ```json
 header = {
-  "user-id" : "123414"
+  "user-id" : "123414",
+   ...
 }
 
 key = "channel-name"
