@@ -24,15 +24,15 @@ type Message struct {
 	Data    string `json:"data"`
 }
 
-type ChannelHandler struct {
+type PrivateHandler struct {
 	hub *hub.Hub
 }
 
-func NewChannelHandler(hub *hub.Hub) *ChannelHandler {
-	return &ChannelHandler{hub: hub}
+func NewPrivateHandler(hub *hub.Hub) *PrivateHandler {
+	return &PrivateHandler{hub: hub}
 }
 
-func (h ChannelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h PrivateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Got Right Place")
 	userId := r.Context().Value("user_id").(string)
 
@@ -51,7 +51,7 @@ func (h ChannelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (h ChannelHandler) Handle(conn *websocket.Conn, client *room.Client) {
+func (h PrivateHandler) Handle(conn *websocket.Conn, client *room.Client) {
 	for {
 		_, p, readErr := conn.ReadMessage()
 		if readErr != nil {

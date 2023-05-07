@@ -1,17 +1,28 @@
 package hub
 
 import (
+	"context"
 	"fmt"
 	"sync"
+	"websocket/configs"
 	"websocket/refactor/room"
 )
 
 type Hub struct {
-	rooms sync.Map
+	kafka           IKafkaHandler
+	rooms           sync.Map
+	PrivateReceiver chan PrivateMessage
+	PublicReceiver  chan KafkaMessage
+	AuthReceiver    chan KafkaMessage
 }
 
-func NewHub() *Hub {
-	return &Hub{}
+func NewHub(kafka IKafkaHandler) *Hub {
+	return &Hub{
+		kafka:           kafka,
+		PrivateReceiver: make(chan PrivateMessage),
+		PublicReceiver:  make(chan KafkaMessage),
+		AuthReceiver:    make(chan KafkaMessage),
+	}
 }
 
 func (h *Hub) GetRoom(name string, filter room.MessageFilter) room.IRoom {
@@ -33,9 +44,15 @@ type PrivateMessage struct {
 	Message []byte
 }
 
-func (h *Hub) Streaming(privateChan chan PrivateMessage) {
+type KafkaMessage struct {
+	Value         string
+	CorrelationId string
+}
+
+func (h *Hub) PrivateStreaming() {
 	for {
-		msg := <-privateChan
+		msg := <-h.PrivateReceiver
+		//msg := <-privateChan
 		fmt.Println("received private message")
 		fmt.Println("room-id ", string(msg.Room))
 		fmt.Println("user-id: ", string(msg.UserId))
@@ -53,5 +70,37 @@ func (h *Hub) Streaming(privateChan chan PrivateMessage) {
 			return true
 		})
 
+	}
+}
+
+func (h *Hub) Streaming() {
+	go h.kafka.Consume(context.Background(), configs.WebSocketPublicTopic, h.PublicReceiver, h.PrivateReceiver)
+	go h.kafka.Consume(context.Background(), configs.WEBSOCKET_AUTHENTICATION_TOPIC, h.AuthReceiver, nil)
+
+	// listening for private channel
+	go h.PrivateStreaming()
+
+	// listening for public channel
+	go h.PublicStreaming()
+
+}
+
+func (h *Hub) PublicStreaming() {
+	for {
+		msg := <-h.PublicReceiver
+		//wsHandler.PublicWriter(resp.Value)
+
+		fmt.Println("received public message")
+		fmt.Println("room-id ", "public")
+		fmt.Println("message: ", msg.Value)
+
+		r, ok := h.rooms.Load("public")
+		if !ok {
+			fmt.Println("not found public channel")
+			continue
+		}
+
+		publicRoom := r.(room.IRoom)
+		publicRoom.Broadcast([]byte(msg.Value))
 	}
 }

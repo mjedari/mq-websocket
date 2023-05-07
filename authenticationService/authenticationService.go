@@ -10,6 +10,7 @@ import (
 	"time"
 	"websocket/configs"
 	"websocket/kafkaManager"
+	"websocket/refactor/hub"
 )
 
 var channels sync.Map
@@ -46,10 +47,6 @@ type authenticationMetaData struct {
 type authenticationData struct {
 	UserId   string `json:"user_id"`
 	DeviceId string `json:"device_id"`
-}
-
-func init() {
-	go consumeAuthenticationTopic()
 }
 
 func Authenticate(headers http.Header, requestId string, ctx context.Context) (string, string, error) {
@@ -94,9 +91,7 @@ func Authenticate(headers http.Header, requestId string, ctx context.Context) (s
 	}
 }
 
-func consumeAuthenticationTopic() {
-	userIdChannel := make(chan kafkaManager.KafkaMessage)
-	go kafkaManager.Consume(context.Background(), configs.WEBSOCKET_AUTHENTICATION_TOPIC, userIdChannel, nil)
+func HandleAuthMessage(userIdChannel chan hub.KafkaMessage) {
 	for {
 		kafkaMessage := <-userIdChannel
 		c, ok := channels.Load(kafkaMessage.CorrelationId)

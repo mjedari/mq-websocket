@@ -12,16 +12,10 @@ import (
 	"websocket/refactor/hub"
 )
 
-const PollingTimeout = 100  // unit: ms
-const NumberOfConsumers = 1 // unit: ms
+const PollingTimeout = 100 // unit: ms
 
 var Host string
 var Port string
-
-type KafkaMessage struct {
-	Value         string
-	CorrelationId string
-}
 
 type ProduceMessage struct {
 	Topic         string
@@ -64,7 +58,15 @@ func CreateTopic(ctx context.Context, topics []string, partitions, replicationFa
 	return nil
 }
 
-func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage, privateChan chan hub.PrivateMessage) {
+type KafkaHandler struct {
+	//
+}
+
+func NewKafkaHandler() *KafkaHandler {
+	return &KafkaHandler{}
+}
+
+func (h *KafkaHandler) Consume(ctx context.Context, topic string, responseChan chan hub.KafkaMessage, privateChan chan hub.PrivateMessage) {
 	logrus.Infof("consuming topic %s: %v \n", topic, responseChan)
 
 	for {
@@ -92,7 +94,7 @@ func Consume(ctx context.Context, topic string, responseChan chan KafkaMessage, 
 
 				switch e := ev.(type) {
 				case *kafka.Message:
-					message := KafkaMessage{
+					message := hub.KafkaMessage{
 						Value:         string(e.Value),
 						CorrelationId: getCorrelationId(e.Headers),
 					}
@@ -148,6 +150,7 @@ func getUserId(headers []kafka.Header) []byte {
 	}
 	return nil
 }
+
 func Produce(ctx context.Context, message ProduceMessage) {
 	producer, pErr := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": Host + ":" + Port})
 	if pErr != nil {

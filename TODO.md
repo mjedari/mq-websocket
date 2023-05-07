@@ -26,10 +26,29 @@ codes. [here](https://kapeli.com/cheat_sheets/WebSocket_Status_Codes.docset/Cont
 * Security improvements like, rate limiter, filtered messages and ... 
 * Using cloud patterns like retry pattern and request tracing (2 for retry)
 * Metrics for prometheus (Grafana dashboard and integrate) (3)
+* 
 * Centralized logging
 * Distributed tracing
 * Unit testing after restructuring the project ( ? )
 * investigating the potential problems of services (3)
+* timeout cloud pattern for producing, consuming kafka
+* use context to trance each request got the webserver and log its errors based of an unique identifier
+and use the id in metrics. Ex: I populate the request with uuid and pass it down to the modules, If I wrote
+response on connection calculate the time spend on so far. In gateway this would be more essential. We can use correlation id.
 
 ### Private Channel:
 * We should add timeout mechanize to remove zombie connections through the life of web socket (2)
+
+### Prometheus' metrics:
+* per endpoint calls, latency  (implement with dimension and labels)
+* number of online connections
+* number of open rooms
+* rate of writing messages (per room / per user / )
+* size of allocated memory for rooms 
+* zombie connections
+* number of goroutines
+* connections living time 
+* amount of data is writing on connections (per user/ per endpoint)
+* authentication failures
+* connection codes monitoring (1001, 1006, ...)
+* runtime configuration states
