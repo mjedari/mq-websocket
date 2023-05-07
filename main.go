@@ -8,7 +8,6 @@ import (
 	"time"
 	"websocket/configs"
 	"websocket/kafkaManager"
-	"websocket/publicMessageManager"
 	"websocket/refactor/handler"
 	"websocket/refactor/hub"
 	"websocket/wsHandler"
