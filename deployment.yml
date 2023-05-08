@@ -86,7 +86,20 @@ spec:
               number: 8080
         path: /
         pathType: Prefix
+  - host: ws.abantether.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: websocket
+            port:
+              number: 8080
+        path: /
+        pathType: Prefix
   tls:
   - hosts:
     - ws.kube.vone.abanchange.me
     secretName: ws-general-tls
+  - hosts:
+    - ws.abantether.com
+    secretName: ws-abantether-general-tls
