@@ -57,7 +57,7 @@ func (h PrivateHandler) Handle(conn *websocket.Conn, client *room.Client) {
 		if readErr != nil {
 			fmt.Println("receive message from client", client, readErr)
 
-			if websocket.IsCloseError(readErr, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			if websocket.IsCloseError(readErr, websocket.CloseGoingAway, websocket.CloseAbnormalClosure, websocket.CloseNormalClosure) {
 				if client.Room != nil {
 					client.Room.Leave(client)
 				}
