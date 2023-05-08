@@ -2,24 +2,40 @@ package main
 
 import (
 	"context"
+	"github.com/getsentry/sentry-go"
 	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
 	"time"
+	"websocket/authenticationService"
 	"websocket/configs"
 	"websocket/kafkaManager"
-	"websocket/publicMessageManager"
-	"websocket/wsHandler"
-
-	"github.com/getsentry/sentry-go"
+	"websocket/refactor/handler"
+	"websocket/refactor/hub"
 )
 
 func main() {
 	InitSentry()
 	CreateTopics() // create required websocket topics
-	go publicMessageManager.ReceiveMessages()
-	http.HandleFunc("/", wsHandler.WsHandler)
-	err := http.ListenAndServe(":"+configs.WebSocketPort, nil)
+
+	kafkaHandler := kafkaManager.NewKafkaHandler()
+	newHub := hub.NewHub(kafkaHandler)
+
+	newHub.Streaming()
+	go authenticationService.HandleAuthMessage(newHub.AuthReceiver)
+
+	newPrivateHandler := handler.NewPrivateHandler(newHub)
+	privateHandler := handler.LoggerMiddleware(handler.PrivateChannelMiddleware(newPrivateHandler))
+
+	newPublicHandler := handler.NewPublicHandler(newHub)
+	publicHandler := handler.LoggerMiddleware(newPublicHandler)
+
+	// build endpoints
+	mux := http.NewServeMux()
+	mux.Handle("/", publicHandler)
+	mux.Handle("/private", privateHandler)
+
+	err := http.ListenAndServe(":"+configs.WebSocketPort, mux)
 	if err != nil {
 		log.Fatal(err)
 		sentry.CaptureException(err)
