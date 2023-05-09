@@ -31,6 +31,9 @@ deploy-testing:
     - COMPOSE_HTTP_TIMEOUT=120 docker-compose -H "ssh://testing" top
   only:
     - main
+  except:
+    changes:
+      - "*.md"
   tags:
     - websocket
   stage: deploy-testing
