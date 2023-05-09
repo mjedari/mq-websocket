@@ -34,7 +34,7 @@ spec:
           value: redis-gateway-master.redis.svc.cluster.local
         - name: REDIS_PORT
           value: "6379"
-        image: repo.abanicon.com:5050/abantheter-microservices/websocket:v0.0.1
+        image: repo.abanicon.com:5050/abantheter-microservices/websocket:v0.0.3
         imagePullPolicy: "Always"
         name: app
         ports:
