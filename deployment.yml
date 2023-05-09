@@ -20,8 +20,10 @@ spec:
       - env:
         - name: DEBUG
           value: "true"
+        - name: SENTRY_DSN
+          value: 'https://331c2f339f31410496fc86f99ec1986b@sentry.abantether.info/2'
         - name: ENVIRONMENT
-          value: micro      
+          value: production
         - name: WEBSOCKET_SERVER_HOST
           value: "0.0.0.0"
         - name: KAFKA_HOST
