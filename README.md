@@ -18,7 +18,7 @@ If you want unsubscribe just change the action to `unsubscribe`.
 ```js
 const WebSocket = require('ws');
 
-var socket = new WebSocket("ws://localhost:8000/private");
+var socket = new WebSocket("wss://abansite.com/wss/private");
 
 socket.onopen = () => {
     socket.send(JSON.stringify({"action": "subscribe", "channel": "channel-name", "data": "this is optional."}))
