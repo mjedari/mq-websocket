@@ -24,8 +24,8 @@ func (r *Room) GetClients() map[*Client]bool {
 }
 
 func (r *Room) Broadcast(message []byte) {
-	r.mux.Lock()
-	defer r.mux.Unlock()
+	//r.mux.Lock()
+	//defer r.mux.Unlock()
 
 	for client := range r.Clients {
 		fmt.Println("published by streaming on client:", client)
