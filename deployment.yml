@@ -39,7 +39,13 @@ spec:
         name: app
         ports:
         - containerPort: 8080
-        resources: {}
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "64m"
+          limits:
+            memory: "1Gi"
+            cpu: "512m"
       nodeSelector:
         cputype: fast
       imagePullSecrets:
