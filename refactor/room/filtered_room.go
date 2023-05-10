@@ -1,5 +1,7 @@
 package room
 
+import "sync"
+
 type MessageFilter func(message []byte) bool
 
 type FilteredRoom struct {
@@ -7,15 +9,14 @@ type FilteredRoom struct {
 	filter MessageFilter
 }
 
-func (fr *FilteredRoom) GetClients() map[*Client]bool {
-	return fr.Clients
+func (fr *FilteredRoom) GetClients() *sync.Map {
+	return &fr.Clients
 }
 
 func NewFilteredRoom(name string, filter MessageFilter) *FilteredRoom {
 	return &FilteredRoom{
 		Room: &Room{
-			Name:    name,
-			Clients: make(map[*Client]bool),
+			Name: name,
 		},
 		filter: filter,
 	}

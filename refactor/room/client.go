@@ -9,15 +9,18 @@ type Client struct {
 	UserId string
 	Conn   *websocket.Conn
 	Send   chan []byte
+	Close  chan bool
 	Room   IRoom
 }
 
 func NewClient(userId string, conn *websocket.Conn) *Client {
-	return &Client{UserId: userId, Conn: conn, Send: make(chan []byte)}
+	return &Client{UserId: userId, Conn: conn, Send: make(chan []byte), Close: make(chan bool)}
 }
 
-func (c Client) WriteOnConnection() {
-	defer c.Conn.Close()
+func (c *Client) WriteOnConnection() {
+	defer func() {
+		c.Conn.Close()
+	}()
 
 	for {
 		select {
@@ -27,12 +30,17 @@ func (c Client) WriteOnConnection() {
 				return
 			}
 			c.Conn.WriteMessage(websocket.TextMessage, message)
+		case <-c.Close:
+			return
 		}
 	}
-
 }
 
-func (c Client) ReadFromClient() {
+func (c *Client) ReadFromClient() {
+	defer func() {
+		c.Conn.Close()
+	}()
+
 	for {
 		// read in a message
 		_, _, err := c.Conn.ReadMessage()

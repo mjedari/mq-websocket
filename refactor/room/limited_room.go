@@ -18,8 +18,7 @@ type RateLimitedRoom struct {
 func NewRateLimitedRoom(name string, rate int) *RateLimitedRoom {
 	return &RateLimitedRoom{
 		Room: &Room{
-			Name:    name,
-			Clients: make(map[*Client]bool),
+			Name: name,
 		},
 		rate:     rate,
 		lastSent: time.Now(),
