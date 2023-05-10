@@ -27,9 +27,6 @@ func (c Client) WriteOnConnection() {
 				return
 			}
 			c.Conn.WriteMessage(websocket.TextMessage, message)
-
-		default:
-			//
 		}
 	}
 
