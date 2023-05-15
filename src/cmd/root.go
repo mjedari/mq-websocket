@@ -40,5 +40,5 @@ func initConfig() {
 		log.Fatalf("Fatal error config file: %s \n", err)
 	}
 	viper.Unmarshal(&configs.Config)
-	log.Info("configuration initialized! (Notice: configurations may initialised from OS ENV)")
+	log.Info("configuration initialized! (Notice: configurations may be initialised from OS ENV)")
 }

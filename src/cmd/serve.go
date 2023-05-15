@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"github.com/getsentry/sentry-go"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,7 +16,6 @@ import (
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/hub"
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/storage"
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/wiring"
-	"time"
 )
 
 var serveCmd = &cobra.Command{
@@ -56,15 +55,6 @@ func serve(ctx context.Context) {
 
 	runHttpServer(ctx, newHub)
 
-	// sentry just capture the main goroutine panics
-	defer func() {
-		err := recover()
-		if err != nil {
-			fmt.Println("Got Err: ", err)
-			sentry.CurrentHub().Recover(err)
-			sentry.Flush(time.Second * 5)
-		}
-	}()
 }
 
 func createTopics(ctx context.Context) {
@@ -115,15 +105,10 @@ func runHttpServer(ctx context.Context, hub *hub.Hub) {
 	mux.Handle("/", publicHandler)
 	mux.Handle("/private", privateHandler)
 
-	err := http.ListenAndServe(configs.Config.Server.Host+":"+configs.Config.Server.Port, mux)
-	if err != nil {
-		log.Fatal(err)
-		sentry.CaptureException(err)
-	}
-
-	address := fmt.Sprintf("%s:%v", configs.Config.Server.Host, configs.Config.Server.Port)
-	log.WithField("HTTP_Port", configs.Config.Server.Port).
-		Info("starting HTTP/REST gateway...")
+	address := net.JoinHostPort(configs.Config.Server.Host, configs.Config.Server.Port)
+	log.WithField("HTTP_Host", configs.Config.Server.Host).
+		WithField("HTTP_Port", configs.Config.Server.Port).
+		Info("starting HTTP/REST websocket...")
 
 	server := &http.Server{Addr: address, Handler: mux}
 
@@ -132,10 +117,21 @@ func runHttpServer(ctx context.Context, hub *hub.Hub) {
 		server.Shutdown(ctx)
 	}()
 
-	err = server.ListenAndServe()
+	err := server.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
+		sentry.CaptureException(err)
 	}
+
+	// sentry just capture the main goroutine panics
+	//defer func() {
+	//	rErr := recover()
+	//	if rErr != nil {
+	//		fmt.Println("Got Err: ", rErr)
+	//		sentry.CurrentHub().Recover(rErr)
+	//		sentry.Flush(time.Second * 5)
+	//	}
+	//}()
 }
 
 func initWiring() {
