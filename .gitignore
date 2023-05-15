@@ -4,3 +4,4 @@ venv
 **/__pycache__/
 **/*.log
 .vscode/settings.json
+/src/websocket

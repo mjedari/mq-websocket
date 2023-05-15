@@ -1,0 +1,37 @@
+Server:
+  Host: localhost
+  Port: 8000
+
+Redis:
+  Host: localhost # testing: 192.168.130.4
+  Port: 6379 # 10104
+  User:
+  Pass:
+  ServicesRedisKey: Services
+
+Kafka:
+  Host: localhost # testing: 192.168.130.21
+  Port: 9092
+  DefaultGroup: mygroup
+  Group: websocket_group
+  ResponseTopic: websocket_response_topic
+  ResponsePartitionsCount: 1
+  ResponseReplicationFactor: 1
+  StatusCodeKey: status_code
+  CorrelationIdKey: correlation_id
+
+AuthServer:
+  WebsocketAuthenticationTopic: websocket_authentication_topic
+  AuthenticationKey: get_device_id_by_headers
+  AuthenticationTopic: auths_public
+  TTL: 3 # in minutes
+  TIMEOUT: 20 # in seconds
+
+Sentry:
+  DSN: "https://5f3be1a360174839ae243a1f1344866d@o4503970402992128.ingest.sentry.io/4503970404302848"
+  Environment: local
+  Debug: true
+
+Topics:
+  Health: health-topic
+  PublicTopic: websocket_public_topic

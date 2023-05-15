@@ -3,9 +3,9 @@ package hub
 import (
 	"context"
 	"fmt"
+	"repo.abanicon.com/abantheter-microservices/websocket/configs"
+	room2 "repo.abanicon.com/abantheter-microservices/websocket/pkg/room"
 	"sync"
-	"websocket/configs"
-	"websocket/refactor/room"
 )
 
 type Hub struct {
@@ -25,16 +25,16 @@ func NewHub(kafka IKafkaHandler) *Hub {
 	}
 }
 
-func (h *Hub) GetRoom(name string, filter room.MessageFilter) room.IRoom {
+func (h *Hub) GetRoom(name string, filter room2.MessageFilter) room2.IRoom {
 	switch filter {
 	case nil:
-		newRoom := room.NewRoom(name)
+		newRoom := room2.NewRoom(name)
 		r, _ := h.rooms.LoadOrStore(name, newRoom)
-		return r.(room.IRoom)
+		return r.(room2.IRoom)
 	default:
-		newRoom := room.NewFilteredRoom(name, filter)
+		newRoom := room2.NewFilteredRoom(name, filter)
 		r, _ := h.rooms.LoadOrStore(name, newRoom)
-		return r.(room.IRoom)
+		return r.(room2.IRoom)
 	}
 }
 
@@ -59,7 +59,7 @@ func (h *Hub) PrivateStreaming() {
 		fmt.Println("message: ", string(msg.Message))
 
 		h.rooms.Range(func(key, value any) bool {
-			r, ok := value.(room.IRoom)
+			r, ok := value.(room2.IRoom)
 			if !ok {
 				return false
 			}
@@ -74,8 +74,8 @@ func (h *Hub) PrivateStreaming() {
 }
 
 func (h *Hub) Streaming() {
-	go h.kafka.Consume(context.Background(), configs.WebSocketPublicTopic, h.PublicReceiver, h.PrivateReceiver)
-	go h.kafka.Consume(context.Background(), configs.WEBSOCKET_AUTHENTICATION_TOPIC, h.AuthReceiver, nil)
+	go h.kafka.Consume(context.Background(), configs.Config.Topics.PublicTopic, h.PublicReceiver, h.PrivateReceiver)
+	go h.kafka.Consume(context.Background(), configs.Config.AuthServer.WebsocketAuthenticationTopic, h.AuthReceiver, nil)
 
 	// listening for private channel
 	go h.PrivateStreaming()
@@ -100,7 +100,7 @@ func (h *Hub) PublicStreaming() {
 			continue
 		}
 
-		publicRoom := r.(room.IRoom)
+		publicRoom := r.(room2.IRoom)
 		publicRoom.Broadcast([]byte(msg.Value))
 	}
 }

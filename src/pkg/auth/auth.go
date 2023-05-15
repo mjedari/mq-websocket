@@ -1,4 +1,4 @@
-package authenticationService
+package auth
 
 import (
 	"context"
@@ -6,16 +6,30 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"repo.abanicon.com/abantheter-microservices/websocket/configs"
+	"repo.abanicon.com/abantheter-microservices/websocket/pkg/broker"
+	"repo.abanicon.com/abantheter-microservices/websocket/pkg/hub"
+	"repo.abanicon.com/abantheter-microservices/websocket/pkg/storage"
 	"sync"
 	"time"
-	"websocket/configs"
-	"websocket/kafkaManager"
-	"websocket/refactor/hub"
 )
 
 var channels sync.Map
 
 type StandardHeader map[string]string
+
+type AuthService struct {
+	storage  *storage.Redis
+	cacheTTL int64
+}
+
+func NewAuthService(storage *storage.Redis, config configs.AuthServer) *AuthService {
+	as := &AuthService{
+		storage:  storage,
+		cacheTTL: config.TTL,
+	}
+	return as
+}
 
 func Standardize(headers http.Header) StandardHeader {
 	standard_headers := make(StandardHeader)
@@ -66,14 +80,14 @@ func Authenticate(headers http.Header, requestId string, ctx context.Context) (s
 		return "", "", err
 	}
 
-	message := kafkaManager.ProduceMessage{
-		Topic:         configs.AUTHENTICATION_TOPIC,
-		Key:           configs.AUTHENTICATION_KEY,
+	message := broker.ProduceMessage{
+		Topic:         configs.Config.AuthServer.AuthenticationTopic,
+		Key:           configs.Config.AuthServer.AuthenticationKey,
 		RequestId:     requestId,
 		Message:       string(jsonValue),
-		ResponseTopic: configs.WEBSOCKET_AUTHENTICATION_TOPIC,
+		ResponseTopic: configs.Config.AuthServer.WebsocketAuthenticationTopic,
 	}
-	go kafkaManager.Produce(ctx, message)
+	go broker.Produce(ctx, message)
 
 	select {
 	case resp := <-requestChannel:
@@ -82,7 +96,7 @@ func Authenticate(headers http.Header, requestId string, ctx context.Context) (s
 			json.Unmarshal([]byte(resp), &respModel)
 			return respModel.Data.UserId, respModel.Data.DeviceId, nil
 		}
-	case <-time.After(configs.AuthTimeout * time.Second):
+	case <-time.After(time.Duration(configs.Config.AuthServer.Timeout) * time.Second):
 		{
 			channels.Delete(requestId)
 			log.Println("Authentication server is down !!")

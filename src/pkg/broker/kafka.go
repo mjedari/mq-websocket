@@ -1,4 +1,4 @@
-package kafkaManager
+package broker
 
 import (
 	"context"
@@ -7,15 +7,30 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/sirupsen/logrus"
 	"log"
+	"net"
 	"os"
-	"websocket/configs"
-	"websocket/refactor/hub"
+	"repo.abanicon.com/abantheter-microservices/websocket/configs"
+	"repo.abanicon.com/abantheter-microservices/websocket/pkg/hub"
 )
 
 const PollingTimeout = 100 // unit: ms
 
-var Host string
-var Port string
+type Kafka struct {
+	*kafka.AdminClient
+}
+
+func NewKafka(config configs.KafkaConfig) (*Kafka, error) {
+	client, err := kafka.NewAdminClient(&kafka.ConfigMap{
+		"bootstrap.servers":     config.Host + ":" + config.Port,
+		"broker.address.family": "v4",
+		"debug":                 "broker,protocol,feature",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &Kafka{AdminClient: client}, nil
+}
 
 type ProduceMessage struct {
 	Topic         string
@@ -25,13 +40,8 @@ type ProduceMessage struct {
 	ResponseTopic string
 }
 
-func init() {
-	SetKafkaServerAddress()
-}
-
-func CreateTopic(ctx context.Context, topics []string, partitions, replicationFactor int) error {
+func (k *Kafka) CreateTopic(ctx context.Context, topics []string, partitions, replicationFactor int) error {
 	var topicConfigs []kafka.TopicSpecification
-
 	for _, topic := range topics {
 		t := kafka.TopicSpecification{
 			Topic:             topic,
@@ -40,15 +50,7 @@ func CreateTopic(ctx context.Context, topics []string, partitions, replicationFa
 		}
 		topicConfigs = append(topicConfigs, t)
 	}
-
-	newAdmin, err := kafka.NewAdminClient(&kafka.ConfigMap{
-		"bootstrap.servers":     Host + ":" + Port,
-		"broker.address.family": "v4",
-		"debug":                 "broker,protocol,feature",
-	})
-	defer newAdmin.Close()
-
-	result, err := newAdmin.CreateTopics(ctx, topicConfigs)
+	result, err := k.AdminClient.CreateTopics(ctx, topicConfigs)
 	if err != nil && len(result) == 0 {
 		log.Println(err)
 		panic(fmt.Sprintf("error in topic creation: %s", err.Error()))
@@ -58,15 +60,7 @@ func CreateTopic(ctx context.Context, topics []string, partitions, replicationFa
 	return nil
 }
 
-type KafkaHandler struct {
-	//
-}
-
-func NewKafkaHandler() *KafkaHandler {
-	return &KafkaHandler{}
-}
-
-func (h *KafkaHandler) Consume(ctx context.Context, topic string, responseChan chan hub.KafkaMessage, privateChan chan hub.PrivateMessage) {
+func (k *Kafka) Consume(ctx context.Context, topic string, responseChan chan hub.KafkaMessage, privateChan chan hub.PrivateMessage) {
 	logrus.Infof("consuming topic %s: %v \n", topic, responseChan)
 
 	for {
@@ -135,7 +129,7 @@ func (h *KafkaHandler) Consume(ctx context.Context, topic string, responseChan c
 
 func getCorrelationId(headers []kafka.Header) string {
 	for _, v := range headers {
-		if v.Key == configs.CORRELATION_ID_KEY {
+		if v.Key == configs.Config.Kafka.CorrelationIdKey {
 			return string(v.Value)
 		}
 	}
@@ -152,7 +146,8 @@ func getUserId(headers []kafka.Header) []byte {
 }
 
 func Produce(ctx context.Context, message ProduceMessage) {
-	producer, pErr := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": Host + ":" + Port})
+	fmt.Println("Got produce", configs.Config.Kafka.Host+":"+configs.Config.Kafka.Port)
+	producer, pErr := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": configs.Config.Kafka.Host + ":" + configs.Config.Kafka.Port})
 	if pErr != nil {
 		panic(pErr)
 	}
@@ -169,27 +164,13 @@ func Produce(ctx context.Context, message ProduceMessage) {
 	}
 
 	defer producer.Close()
-
 	producer.Flush(15 * 1000)
-}
-
-func SetKafkaServerAddress() {
-	Host = os.Getenv("KAFKA_HOST")
-	Port = os.Getenv("KAFKA_PORT")
-	if Host == "" {
-		Host = "localhost"
-		log.Println("Using default kafka host")
-	}
-	if Port == "" {
-		Port = "9092"
-		log.Println("Using default kafka port")
-	}
 }
 
 func createNewConsumer() (*kafka.Consumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":     Host + ":" + Port,
-		"group.id":              configs.WebSocketKafkaGroup,
+		"bootstrap.servers":     net.JoinHostPort(configs.Config.Kafka.Host, configs.Config.Kafka.Port),
+		"group.id":              configs.Config.Kafka.Group,
 		"auto.offset.reset":     "latest",
 		"broker.address.family": "v4",
 		"max.poll.interval.ms":  600000,
@@ -205,7 +186,35 @@ func createNewConsumer() (*kafka.Consumer, error) {
 
 func generateMessageHeaders(requestId string, responseTopic string) []kafka.Header {
 	return []kafka.Header{
-		{Key: configs.CORRELATION_ID_KEY, Value: []byte(requestId)},
-		{Key: configs.WEBSOCKET_RESPONSE_KEY, Value: []byte(responseTopic)},
+		{Key: configs.Config.Kafka.CorrelationIdKey, Value: []byte(requestId)},
+		{Key: configs.Config.Kafka.ResponseTopic, Value: []byte(responseTopic)},
+	}
+}
+
+func ConsumeHealth(ctx context.Context, topic string) (string, error) {
+	newConsumer, err := createNewConsumer()
+	if err != nil {
+		log.Println("error in consuming topic", topic, err)
+		return "", err
+	}
+
+	defer func() {
+		if closeErr := newConsumer.Close(); closeErr != nil {
+			logrus.Error("failed to close reader:", closeErr)
+		}
+	}()
+
+	if consumeErr := newConsumer.SubscribeTopics([]string{topic}, nil); consumeErr != nil {
+		return "", err
+	}
+
+	for {
+		msg, consumeErr := newConsumer.ReadMessage(-1)
+		if consumeErr != nil {
+			logrus.Errorf("read message error on topic %s: %v\n", topic, consumeErr)
+			return "", consumeErr
+		}
+		log.Println("message received", topic, string(msg.Value))
+		return string(msg.Value), nil
 	}
 }

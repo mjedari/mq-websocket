@@ -7,8 +7,20 @@ import (
 	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
-	"websocket/authenticationService"
+	"repo.abanicon.com/abantheter-microservices/websocket/pkg/auth"
 )
+
+func SocketValidationMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check if the request has the correct headers for a WebSocket connection
+		if r.Header.Get("Upgrade") != "websocket" || r.Header.Get("Connection") != "Upgrade" {
+			http.Error(w, "Not a WebSocket request", http.StatusBadRequest)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
 
 func LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +36,7 @@ func PrivateChannelMiddleware(next http.Handler) http.Handler {
 		fmt.Println("Got authentication middleware")
 		correlationId := uuid.New().String()
 		ctx := r.Context()
-		userId, deviceId, err := authenticationService.Authenticate(r.Header, correlationId, ctx)
+		userId, deviceId, err := auth.Authenticate(r.Header, correlationId, ctx)
 		if err != nil {
 			logrus.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)

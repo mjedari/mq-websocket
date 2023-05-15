@@ -6,8 +6,8 @@ import (
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
-	"websocket/refactor/hub"
-	"websocket/refactor/room"
+	"repo.abanicon.com/abantheter-microservices/websocket/pkg/hub"
+	"repo.abanicon.com/abantheter-microservices/websocket/pkg/room"
 )
 
 var publicUpgrader = websocket.Upgrader{
