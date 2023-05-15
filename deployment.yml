@@ -10,46 +10,46 @@ spec:
   selector:
     matchLabels:
       io.kompose.service: websocket
-  strategy: { }
+  strategy: {}
   template:
     metadata:
       labels:
         io.kompose.service: websocket
     spec:
       containers:
-        - env:
-            - name: DEBUG
-              value: "true"
-            - name: SENTRY_DSN
-              value: 'https://331c2f339f31410496fc86f99ec1986b@sentry.abantether.info/2'
-            - name: ENVIRONMENT
-              value: production
-            - name: WEBSOCKET_SERVER_HOST
-              value: "0.0.0.0"
-            - name: KAFKA_HOST
-              value: kafka.kafka.svc.cluster.local
-            - name: KAFKA_PORT
-              value: "9092"
-            - name: REDIS_HOST
-              value: redis-gateway-master.redis.svc.cluster.local
-            - name: REDIS_PORT
-              value: "6379"
-          image: repo.abanicon.com:5050/abantheter-microservices/websocket:v0.0.3
-          imagePullPolicy: "Always"
-          name: app
-          ports:
-            - containerPort: 8080
-          resources:
-            requests:
-              memory: "512Mi"
-              cpu: "64m"
-            limits:
-              memory: "1Gi"
-              cpu: "512m"
+      - env:
+        - name: DEBUG
+          value: "true"
+        - name: SENTRY_DSN
+          value: 'https://331c2f339f31410496fc86f99ec1986b@sentry.abantether.info/2'
+        - name: ENVIRONMENT
+          value: production
+        - name: WEBSOCKET_SERVER_HOST
+          value: "0.0.0.0"
+        - name: KAFKA_HOST
+          value: kafka.kafka.svc.cluster.local
+        - name: KAFKA_PORT
+          value: "9092"
+        - name: REDIS_HOST
+          value: redis-gateway-master.redis.svc.cluster.local
+        - name: REDIS_PORT
+          value: "6379"
+        image: repo.abanicon.com:5050/abantheter-microservices/websocket:v0.0.3
+        imagePullPolicy: "Always"
+        name: app
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "64m"
+          limits:
+            memory: "1Gi"
+            cpu: "512m"
       nodeSelector:
         cputype: fast
       imagePullSecrets:
-        - name: regcred
+      - name: regcred
       restartPolicy: Always
       serviceAccountName: ""
       volumes: null
@@ -63,13 +63,13 @@ metadata:
   namespace: micro
 spec:
   ports:
-    - name: "websocket-port"
-      port: 8080
-      targetPort: 8080
+  - name: "websocket-port"
+    port: 8080
+    targetPort: 8080
   selector:
     io.kompose.service: websocket
 status:
-  loadBalancer: { }
+  loadBalancer: {}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -84,30 +84,30 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: ws.kube.vone.abanchange.me
-      http:
-        paths:
-          - backend:
-              service:
-                name: websocket
-                port:
-                  number: 8080
-            path: /
-            pathType: Prefix
-    - host: ws.abantether.com
-      http:
-        paths:
-          - backend:
-              service:
-                name: websocket
-                port:
-                  number: 8080
-            path: /
-            pathType: Prefix
+  - host: ws.kube.vone.abanchange.me
+    http:
+      paths:
+      - backend:
+          service:
+            name: websocket
+            port:
+              number: 8080
+        path: /
+        pathType: Prefix
+  - host: ws.abantether.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: websocket
+            port:
+              number: 8080
+        path: /
+        pathType: Prefix
   tls:
-    - hosts:
-        - ws.kube.vone.abanchange.me
-      secretName: ws-general-tls
-    - hosts:
-        - ws.abantether.com
-      secretName: ws-abantether-general-tls
+  - hosts:
+    - ws.kube.vone.abanchange.me
+    secretName: ws-general-tls
+  - hosts:
+    - ws.abantether.com
+    secretName: ws-abantether-general-tls
