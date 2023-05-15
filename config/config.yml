@@ -3,21 +3,19 @@ Server:
   Port: 8000
 
 Redis:
-  Host: localhost # testing: 192.168.130.4
-  Port: 6379 # 10104
+  Host: localhost
+  Port: 6379
   User:
   Pass:
   ServicesRedisKey: Services
 
 Kafka:
-  Host: localhost # testing: 192.168.130.21
+  Host: localhost
   Port: 9092
-  DefaultGroup: mygroup
   Group: websocket_group
   ResponseTopic: websocket_response_topic
   ResponsePartitionsCount: 1
   ResponseReplicationFactor: 1
-  StatusCodeKey: status_code
   CorrelationIdKey: correlation_id
 
 AuthServer:
