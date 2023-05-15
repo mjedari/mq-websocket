@@ -16,7 +16,7 @@ COPY ./src ./src
 COPY ./config/config.yml ./config/config.yml
 
 # Build the project
-RUN cd src && go build -o gateway -tags musl
+RUN cd src && go build -o websocket -tags musl
 
 # Expose port 8080 to the outside world
 EXPOSE 8080
