@@ -23,7 +23,7 @@ func NewKafka(config configs.KafkaConfig) (*Kafka, error) {
 	client, err := kafka.NewAdminClient(&kafka.ConfigMap{
 		"bootstrap.servers":     config.Host + ":" + config.Port,
 		"broker.address.family": "v4",
-		"debug":                 "broker,protocol,feature",
+		//"debug":                 "broker,protocol,feature",
 	})
 	if err != nil {
 		return nil, err
@@ -146,7 +146,6 @@ func getUserId(headers []kafka.Header) []byte {
 }
 
 func Produce(ctx context.Context, message ProduceMessage) {
-	fmt.Println("Got produce", configs.Config.Kafka.Host+":"+configs.Config.Kafka.Port)
 	producer, pErr := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": configs.Config.Kafka.Host + ":" + configs.Config.Kafka.Port})
 	if pErr != nil {
 		panic(pErr)

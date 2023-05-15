@@ -33,7 +33,6 @@ func NewPrivateHandler(hub *hub.Hub) *PrivateHandler {
 }
 
 func (h PrivateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Got Right Place")
 	userId := r.Context().Value("user_id").(string)
 
 	fmt.Println("user if from context", userId)
@@ -74,14 +73,14 @@ func (h PrivateHandler) Handle(conn *websocket.Conn, client *room.Client) {
 		case "subscribe":
 			// can send a filter to remove sensitive information
 			r := h.hub.GetRoom(msg.Channel, nil)
-			fmt.Println("subscribed to channel:", r)
-			r.GetClients()[client] = true
+			fmt.Println("subscribed to channel:", r.GetName())
+			r.GetClients().Store(client, true)
 			client.Room = r
 
 		case "unsubscribe":
 			if client.Room != nil {
 				fmt.Println("unsubscribed to channel:", client.Room)
-				delete(client.Room.GetClients(), client)
+				client.Room.GetClients().Delete(client)
 				client.Room = nil
 			}
 		case "publish":
