@@ -35,7 +35,7 @@ spec:
         - name: REDIS_PORT
           value: "6379"
         - name: SENTRY_SAMPLE_RATE
-          value: "0.1"
+          value: 0.1
         image: repo.abanicon.com:5050/abantheter-microservices/websocket:v0.0.3
         imagePullPolicy: "Always"
         name: app
