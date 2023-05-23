@@ -1,52 +1,48 @@
 Server:
   Host: localhost
-  Port: 8080
+  Port: 8000
 
 Redis:
-  Host: localhost # testing: 192.168.130.4
-  Port: 6379 # 10104
+  Host: localhost
+  Port: 6379
+  User:
   Pass:
   ServicesRedisKey: Services
 
 Kafka:
-  Host: localhost # testing: 192.168.130.21
+  Host: localhost
   Port: 9092
-  DefaultGroup: mygroup
-  Group: gateway_group
-  ResponseTopic: gateway_response
+  Group: websocket_group_2
+  ResponseTopic: websocket_response_topic
   ResponsePartitionsCount: 1
   ResponseReplicationFactor: 1
-  StatusCodeKey: status_code
   CorrelationIdKey: correlation_id
 
-RateLimiter:
-  Active: true
-  Burst: 10
-  Sustained: 10000
-
 AuthServer:
-  GatewayAuthenticationTopic: gateway_authentication_topic
+  WebsocketAuthenticationTopic: gateway_authentication_topic
+  AuthenticationKey: get_device_id_by_headers
   AuthenticationTopic: auths_public
-  TIMEOUT: 10 #in seconds
+  AuthenticationPrivateTopic: auths_private
+  LoginKey: access_token_generated
+  LogoutKey: user_logged_out
+  TTL: 3 # in minutes
+  TIMEOUT: 20 # in seconds
 
 Sentry:
   DSN: "https://5f3be1a360174839ae243a1f1344866d@o4503970402992128.ingest.sentry.io/4503970404302848"
   Environment: local
   Debug: true
 
-ServiceRegistry:
-  Topic: service_registry
-  Timeout: 60
-
-CircuitBreaker:
-  Active: true
-  ConsecutiveFailuresThreshold: 2
-  ConsecutiveSuccessesThreshold: 10
-  BackOffTime: 10
-  HalfOpenPassRequestPercent: 50
-  HalfOpenToCloseFailureThreshold: 30
-  HalfOpenTime: 5
-  CloseToOpenFailureThreshold: 40
-
 Topics:
   Health: health-topic
+  PublicTopic: websocket_public_topic
+
+Security:
+  ValidOrigins:
+    - "localhost"
+    - "127.0.0.1"
+
+RateLimiter:
+  Active: true
+  Rate: 10 # per period
+  Period: 1 # in minutes

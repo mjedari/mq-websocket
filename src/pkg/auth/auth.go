@@ -9,7 +9,7 @@ import (
 	"repo.abanicon.com/abantheter-microservices/websocket/configs"
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/broker"
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/hub"
-	"repo.abanicon.com/abantheter-microservices/websocket/pkg/storage"
+	"repo.abanicon.com/abantheter-microservices/websocket/pkg/infra/storage"
 	"sync"
 	"time"
 )

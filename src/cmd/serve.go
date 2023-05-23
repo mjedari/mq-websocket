@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"github.com/getsentry/sentry-go"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -10,12 +11,13 @@ import (
 	"os"
 	"os/signal"
 	"repo.abanicon.com/abantheter-microservices/websocket/configs"
-	"repo.abanicon.com/abantheter-microservices/websocket/pkg/auth"
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/broker"
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/handler"
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/hub"
-	"repo.abanicon.com/abantheter-microservices/websocket/pkg/storage"
+	"repo.abanicon.com/abantheter-microservices/websocket/pkg/infra/storage"
+	"repo.abanicon.com/abantheter-microservices/websocket/pkg/rate_limiter"
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/wiring"
+	"time"
 )
 
 var serveCmd = &cobra.Command{
@@ -44,14 +46,15 @@ func init() {
 func serve(ctx context.Context) {
 	initSentry()
 	initWiring()
+	initHealer(ctx)
 	createTopics(ctx)
 	kafkaHealthCheck(ctx)
 
-	kafkaHandler := wiring.Wiring.Kafka
-	newHub := hub.NewHub(kafkaHandler)
-
+	newHub := wiring.Wiring.Hub
 	newHub.Streaming()
-	go auth.HandleAuthMessage(newHub.AuthReceiver)
+
+	auth := wiring.Wiring.GetNewAuthService()
+	go auth.Consume(ctx)
 
 	runHttpServer(ctx, newHub)
 
@@ -95,10 +98,14 @@ func kafkaHealthCheck(ctx context.Context) {
 func runHttpServer(ctx context.Context, hub *hub.Hub) {
 	// init
 	newPrivateHandler := handler.NewPrivateHandler(hub)
-	privateHandler := handler.LoggerMiddleware(handler.PrivateChannelMiddleware(newPrivateHandler))
+	privateHandler := handler.LoggerMiddleware(
+		handler.PrivateChannelMiddleware(
+			handler.SocketValidationMiddleware(newPrivateHandler)))
 
 	newPublicHandler := handler.NewPublicHandler(hub)
-	publicHandler := handler.LoggerMiddleware(newPublicHandler)
+	publicHandler := handler.LoggerMiddleware(
+		handler.SocketValidationMiddleware(
+			handler.RateLimiterMiddleware(newPublicHandler)))
 
 	// build endpoints
 	mux := http.NewServeMux()
@@ -124,14 +131,14 @@ func runHttpServer(ctx context.Context, hub *hub.Hub) {
 	}
 
 	// sentry just capture the main goroutine panics
-	//defer func() {
-	//	rErr := recover()
-	//	if rErr != nil {
-	//		fmt.Println("Got Err: ", rErr)
-	//		sentry.CurrentHub().Recover(rErr)
-	//		sentry.Flush(time.Second * 5)
-	//	}
-	//}()
+	defer func() {
+		rErr := recover()
+		if rErr != nil {
+			fmt.Println("Got Err: ", rErr)
+			sentry.CurrentHub().Recover(rErr)
+			sentry.Flush(time.Second * 5)
+		}
+	}()
 }
 
 func initWiring() {
@@ -145,7 +152,11 @@ func initWiring() {
 		log.Fatalf("Fatal error on create kafka connection: %s \n", err)
 	}
 
-	wiring.Wiring = wiring.NewWire(kafkaProvider, redisProvider, configs.Config)
+	newHub := hub.NewHub(kafkaProvider)
+
+	rateLimiter := rate_limiter.NewRateLimiter(configs.Config.RateLimiter)
+
+	wiring.Wiring = wiring.NewWire(kafkaProvider, redisProvider, newHub, rateLimiter, configs.Config)
 	log.Info("wiring initialized")
 }
 
@@ -163,4 +174,21 @@ func initSentry() {
 	if err != nil {
 		log.Fatalf("sentry.Init: %s", err)
 	}
+}
+
+func initHealer(ctx context.Context) {
+	go func() {
+		for {
+			// ping constantly health of redis
+			<-time.Tick(time.Second)
+			pingErr := wiring.Wiring.Redis.Ping(ctx)
+			if pingErr == nil {
+				continue
+			}
+
+			if err := wiring.Wiring.SetNewRedisInstance(); err != nil {
+				fmt.Errorf(err.Error())
+			}
+		}
+	}()
 }

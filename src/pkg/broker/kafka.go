@@ -32,6 +32,11 @@ func NewKafka(config configs.KafkaConfig) (*Kafka, error) {
 	return &Kafka{AdminClient: client}, nil
 }
 
+type ResponseMessage struct {
+	Key     string
+	Message []byte
+}
+
 type ProduceMessage struct {
 	Topic         string
 	Key           string
@@ -168,11 +173,28 @@ func Produce(ctx context.Context, message ProduceMessage) {
 
 func createNewConsumer() (*kafka.Consumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":     net.JoinHostPort(configs.Config.Kafka.Host, configs.Config.Kafka.Port),
-		"group.id":              configs.Config.Kafka.Group,
-		"auto.offset.reset":     "latest",
-		"broker.address.family": "v4",
-		"max.poll.interval.ms":  600000,
+		"bootstrap.servers": net.JoinHostPort(configs.Config.Kafka.Host, configs.Config.Kafka.Port),
+		"group.id":          configs.Config.Kafka.Group,
+		"auto.offset.reset": "latest",
+		//"broker.address.family": "v4",
+		//"max.poll.interval.ms":  600000,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("create new consumer: %v\n", consumer)
+	return consumer, nil
+}
+
+func createNewConsumer2() (*kafka.Consumer, error) {
+	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
+		"bootstrap.servers": net.JoinHostPort(configs.Config.Kafka.Host, configs.Config.Kafka.Port),
+		"group.id":          "group-2",
+		"auto.offset.reset": "latest",
+		//"broker.address.family": "v4",
+		//"max.poll.interval.ms":  600000,
 	})
 
 	if err != nil {
@@ -215,5 +237,67 @@ func ConsumeHealth(ctx context.Context, topic string) (string, error) {
 		}
 		log.Println("message received", topic, string(msg.Value))
 		return string(msg.Value), nil
+	}
+}
+
+func (k *Kafka) ConsumeAuth(ctx context.Context, topic string, responseChan chan ResponseMessage) {
+	logrus.Infof("consuming topic %s: %v \n", topic, responseChan)
+
+	for {
+		run := true
+		consumer, err := createNewConsumer2()
+		if err != nil {
+			log.Println("error in consuming topic", topic, err)
+			panic(err)
+		}
+
+		if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
+			logrus.Error("failed to close subscriber:", subscribeErr)
+		}
+
+		for run == true {
+			select {
+			case <-ctx.Done():
+				return
+
+			default:
+				ev := consumer.Poll(PollingTimeout)
+				if ev == nil {
+					continue
+				}
+
+				switch e := ev.(type) {
+				case *kafka.Message:
+					log.Println("message received", topic, string(e.Value))
+
+					if string(e.Key) == configs.Config.AuthServer.LoginKey {
+						responseChan <- ResponseMessage{
+							Key:     configs.Config.AuthServer.LoginKey,
+							Message: e.Value,
+						}
+					}
+
+					if string(e.Key) == configs.Config.AuthServer.LogoutKey {
+						responseChan <- ResponseMessage{
+							Key:     configs.Config.AuthServer.LogoutKey,
+							Message: e.Value,
+						}
+					}
+					// TODO: handle logout keys also
+
+				case kafka.Error:
+					fmt.Fprintf(os.Stderr, "%% Error: %v: %v\n", e.Code(), e)
+
+					if e.Code() == kafka.ErrMaxPollExceeded {
+						run = false
+						consumer.Close()
+						fmt.Printf("closeing consumer...")
+					}
+
+				default:
+					fmt.Printf("Ignored %v\n", e)
+				}
+			}
+		}
 	}
 }

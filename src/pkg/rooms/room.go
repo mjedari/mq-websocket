@@ -1,4 +1,4 @@
-package room
+package rooms
 
 import (
 	"fmt"
@@ -11,8 +11,9 @@ type Room struct {
 	mux     sync.Mutex
 }
 
-func NewRoom(name string) *Room {
-	return &Room{Name: name}
+func NewRoom(name string) (*Room, error) {
+	// you can set some rules to prevent get new room by returning err
+	return &Room{Name: name}, nil
 }
 
 func (r *Room) GetName() string {
@@ -63,7 +64,7 @@ func (r *Room) PrivateSend(userId string, message []byte) {
 }
 
 func (r *Room) Leave(c *Client) {
-	fmt.Printf("user \"%v\" is leaving \"%v\" room \n", c.UserId, r.Name)
+	fmt.Printf("user \"%v\" is leaving \"%v\" rooms \n", c.UserId, r.Name)
 	//r.mux.Lock()
 	//defer r.mux.Unlock()
 

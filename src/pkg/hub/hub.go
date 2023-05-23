@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"repo.abanicon.com/abantheter-microservices/websocket/configs"
-	room2 "repo.abanicon.com/abantheter-microservices/websocket/pkg/room"
+	"repo.abanicon.com/abantheter-microservices/websocket/pkg/rooms"
 	"sync"
 )
 
@@ -25,17 +25,16 @@ func NewHub(kafka IKafkaHandler) *Hub {
 	}
 }
 
-func (h *Hub) GetRoom(name string, filter room2.MessageFilter) room2.IRoom {
-	switch filter {
-	case nil:
-		newRoom := room2.NewRoom(name)
-		r, _ := h.rooms.LoadOrStore(name, newRoom)
-		return r.(room2.IRoom)
-	default:
-		newRoom := room2.NewFilteredRoom(name, filter)
-		r, _ := h.rooms.LoadOrStore(name, newRoom)
-		return r.(room2.IRoom)
+type RoomFactory func(name string) (rooms.IRoom, error)
+
+func (h *Hub) GetRoom(name string, factory RoomFactory) (rooms.IRoom, error) {
+	newRoom, err := factory(name)
+	if err != nil {
+		return nil, err
 	}
+
+	r, _ := h.rooms.LoadOrStore(name, newRoom)
+	return r.(rooms.IRoom), nil
 }
 
 type PrivateMessage struct {
@@ -54,12 +53,12 @@ func (h *Hub) PrivateStreaming() {
 		msg := <-h.PrivateReceiver
 		//msg := <-privateChan
 		fmt.Println("received private message")
-		fmt.Println("room-id ", string(msg.Room))
+		fmt.Println("rooms-id ", string(msg.Room))
 		fmt.Println("user-id: ", string(msg.UserId))
 		fmt.Println("message: ", string(msg.Message))
 
 		h.rooms.Range(func(key, value any) bool {
-			r, ok := value.(room2.IRoom)
+			r, ok := value.(rooms.IRoom)
 			if !ok {
 				return false
 			}
@@ -75,7 +74,6 @@ func (h *Hub) PrivateStreaming() {
 
 func (h *Hub) Streaming() {
 	go h.kafka.Consume(context.Background(), configs.Config.Topics.PublicTopic, h.PublicReceiver, h.PrivateReceiver)
-	go h.kafka.Consume(context.Background(), configs.Config.AuthServer.WebsocketAuthenticationTopic, h.AuthReceiver, nil)
 
 	// listening for private channel
 	go h.PrivateStreaming()
@@ -91,7 +89,7 @@ func (h *Hub) PublicStreaming() {
 		//wsHandler.PublicWriter(resp.Value)
 
 		fmt.Println("received public message")
-		fmt.Println("room-id ", "public")
+		fmt.Println("rooms-id ", "public")
 		fmt.Println("message: ", msg.Value)
 
 		r, ok := h.rooms.Load("public")
@@ -100,7 +98,27 @@ func (h *Hub) PublicStreaming() {
 			continue
 		}
 
-		publicRoom := r.(room2.IRoom)
+		publicRoom := r.(rooms.IRoom)
 		publicRoom.Broadcast([]byte(msg.Value))
 	}
+}
+
+func (h *Hub) LeaveClient(ctx context.Context, userId string) {
+	h.rooms.Range(func(room, anyRoom any) bool {
+		r, ok := anyRoom.(rooms.IRoom)
+		if !ok {
+			return false
+		}
+
+		r.GetClients().Range(func(client, status any) bool {
+			c := client.(*rooms.Client)
+
+			if c.UserId == userId {
+				r.Leave(c)
+			}
+			return true
+		})
+
+		return true
+	})
 }

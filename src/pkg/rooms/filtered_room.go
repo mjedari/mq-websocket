@@ -1,4 +1,4 @@
-package room
+package rooms
 
 import "sync"
 
@@ -14,6 +14,8 @@ func (fr *FilteredRoom) GetClients() *sync.Map {
 }
 
 func NewFilteredRoom(name string, filter MessageFilter) *FilteredRoom {
+	// you can set some rules to prevent get new room by returning err
+
 	return &FilteredRoom{
 		Room: &Room{
 			Name: name,

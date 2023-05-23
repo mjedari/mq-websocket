@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/hub"
-	"repo.abanicon.com/abantheter-microservices/websocket/pkg/room"
+	"repo.abanicon.com/abantheter-microservices/websocket/pkg/rooms"
 )
 
 var upgrader = websocket.Upgrader{
@@ -36,21 +36,24 @@ func (h PrivateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	userId := r.Context().Value("user_id").(string)
 
 	fmt.Println("user if from context", userId)
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
+	conn, socketErr := upgrader.Upgrade(w, r, nil)
+	if socketErr != nil {
+		log.Println(socketErr)
 		return
 	}
 
-	newClient := room.NewClient(userId, conn)
+	newClient := rooms.NewClient(userId, conn)
 
 	go newClient.WriteOnConnection()
 
-	h.Handle(conn, newClient)
+	if err := h.Handle(conn, newClient); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 }
 
-func (h PrivateHandler) Handle(conn *websocket.Conn, client *room.Client) {
+func (h PrivateHandler) Handle(conn *websocket.Conn, client *rooms.Client) error {
 	for {
 		_, p, readErr := conn.ReadMessage()
 		if readErr != nil {
@@ -71,12 +74,19 @@ func (h PrivateHandler) Handle(conn *websocket.Conn, client *room.Client) {
 
 		switch msg.Action {
 		case "subscribe":
-			// can send a filter to remove sensitive information
-			r := h.hub.GetRoom(msg.Channel, nil)
+			// can initiate a filtered room to remove sensitive information
+			r, err := h.hub.GetRoom(msg.Channel, func(name string) (rooms.IRoom, error) {
+				return rooms.NewRoom(name)
+			})
+
+			if err != nil {
+				return err
+			}
+
 			fmt.Println("subscribed to channel:", r.GetName())
 			r.GetClients().Store(client, true)
-			client.Room = r
 
+			client.Room = r
 		case "unsubscribe":
 			if client.Room != nil {
 				fmt.Println("unsubscribed to channel:", client.Room)
@@ -89,4 +99,5 @@ func (h PrivateHandler) Handle(conn *websocket.Conn, client *room.Client) {
 			}
 		}
 	}
+	return nil
 }

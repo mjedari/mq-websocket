@@ -1,4 +1,4 @@
-package room
+package rooms
 
 import (
 	"sync"
@@ -15,15 +15,16 @@ type RateLimitedRoom struct {
 	mux      sync.Mutex
 }
 
-func NewRateLimitedRoom(name string, rate int) *RateLimitedRoom {
+func NewRateLimitedRoom(name string, ratePerMinute int) (*RateLimitedRoom, error) {
+	// you can set some rules to prevent get new room by returning err
 	return &RateLimitedRoom{
 		Room: &Room{
 			Name: name,
 		},
-		rate:     rate,
+		rate:     ratePerMinute,
 		lastSent: time.Now(),
 		messages: 0,
-	}
+	}, nil
 }
 
 func (rlr *RateLimitedRoom) Broadcast(message []byte) {

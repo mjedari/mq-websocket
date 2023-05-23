@@ -29,6 +29,9 @@ type AuthServer struct {
 	AuthenticationKey            string
 	WebsocketAuthenticationTopic string
 	AuthenticationTopic          string
+	AuthenticationPrivateTopic   string
+	LoginKey                     string
+	LogoutKey                    string
 	TTL                          int64
 	Timeout                      int64
 }
@@ -44,11 +47,23 @@ type Topics struct {
 	PublicTopic string
 }
 
+type Security struct {
+	ValidOrigins []string
+}
+
+type RateLimiter struct {
+	Active bool
+	Rate   int
+	Period uint64
+}
+
 type Configuration struct {
-	Server     Server
-	Redis      RedisConfig
-	Kafka      KafkaConfig
-	AuthServer AuthServer
-	Sentry     SentryConfig
-	Topics     Topics
+	Server      Server
+	Redis       RedisConfig
+	Kafka       KafkaConfig
+	AuthServer  AuthServer
+	Sentry      SentryConfig
+	Topics      Topics
+	RateLimiter RateLimiter
+	Security    Security
 }

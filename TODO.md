@@ -20,12 +20,17 @@
 
 ### Improvements RFC:
 
-* Give a robust nice structure before refactoring (2)
-* Use viper config package to make it more deployable (-)
-* Refactor public-channel to use private-channel structure (2)
-* Security improvements like, rate limiter, filtered messages and ...
-* Using cloud patterns like retry pattern and request tracing (2 for retry)
-* Metrics for prometheus (Grafana dashboard and integrate) (3)
+* [X] Give a robust nice structure before refactoring (2)
+* [X] Use viper config package to make it more deployable (-)
+
+* [ ] Security improvements like, rate limiter, filtered messages and ...
+
+* [X] Refactor public-channel to use private-channel structure (2)
+* [X] Rate limiter for incoming requests (2)
+* [X] Private Channel Authentication (2)
+* [X] Retry pattern for redis (2)
+* [ ] Metrics for prometheus (Grafana dashboard and integrate) (3)
+
 *
 * Centralized logging
 * Distributed tracing
@@ -40,6 +45,7 @@
 ### Private Channel:
 
 * We should add timeout mechanize to remove zombie connections through the life of web socket (2)
+* We should unsubscribe user form private channel if logged out (2)
 
 ### Prometheus' metrics:
 
@@ -60,3 +66,57 @@
 * block IO (read/write)
 * network usage (read/write)
 * Garbage Collection (PauseTotalNs, NumGC)
+
+- cmd
+  - root.go
+  - serve.go
+- configs
+  - config.yaml
+- pkg
+  - auth
+    - auth.go
+  - broker
+    - kafka.go
+  - contacts
+    - broker.go
+    - storage.go
+  - handler
+    - middleware.go
+    - private.go
+    - public.go
+  - hub
+    - hub.go
+    - interface.go
+  - infra
+    - storage
+      - redis.go
+  - rate_limiter
+      - limiter.go 
+  - rooms
+    - client.go
+    - interface.go
+    - limited_rooms.go
+    - filtered_rooms.go
+    - room.go
+  - utils
+    - retry.go
+  - wiring
+    - config.go
+    - wring.go
+  - main.go
+  - go.mod
+  - Makefile
+
+
+
+- app
+  - 
+- domain
+  - hub
+  - room
+  - client
+- infra
+  - storage
+    - redis.go
+  - broker
+    - kafka.go

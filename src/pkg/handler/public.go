@@ -7,8 +7,10 @@ import (
 	"log"
 	"net/http"
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/hub"
-	"repo.abanicon.com/abantheter-microservices/websocket/pkg/room"
+	"repo.abanicon.com/abantheter-microservices/websocket/pkg/rooms"
 )
+
+const PublicRoom = "public"
 
 var publicUpgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -27,26 +29,35 @@ func NewPublicHandler(hub *hub.Hub) *PublicHandler {
 }
 
 func (h PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	uid, err := uuid.NewUUID()
+	uid, _ := uuid.NewUUID()
 	userId := uid.String()
 
-	conn, err := publicUpgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
+	conn, socketErr := publicUpgrader.Upgrade(w, r, nil)
+	if socketErr != nil {
+		log.Println(socketErr)
 		return
 	}
 
-	newClient := room.NewClient(userId, conn)
+	newClient := rooms.NewClient(userId, conn)
 
 	go newClient.WriteOnConnection()
 
-	h.Handle(conn, newClient)
+	if err := h.Handle(conn, newClient); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
 }
 
-func (h PublicHandler) Handle(conn *websocket.Conn, client *room.Client) {
-	r := h.hub.GetRoom("public", nil)
-	fmt.Println("subscribed to public channel:", client.UserId)
+func (h PublicHandler) Handle(conn *websocket.Conn, client *rooms.Client) error {
+	r, err := h.hub.GetRoom(PublicRoom, func(name string) (rooms.IRoom, error) {
+		return rooms.NewRoom(name)
+	})
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("subscribed to %v channel: %v\n", PublicRoom, client.UserId)
 	r.GetClients().Store(client, true)
 	client.Room = r
 
@@ -64,4 +75,5 @@ func (h PublicHandler) Handle(conn *websocket.Conn, client *room.Client) {
 			break
 		}
 	}
+	return nil
 }
