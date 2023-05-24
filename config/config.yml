@@ -1,17 +1,17 @@
 Server:
-  Host: 0.0.0.0
-  Port: 8000
+  Host: websocket_app_1
+  Port: 8080
 
 Redis:
-  Host: localhost
+  Host: redis-server
   Port: 6379
   User:
   Pass:
   ServicesRedisKey: Services
 
 Kafka:
-  Host: 192.168.130.4
-  Port: 29092
+  Host: kafka # 192.168.130.4
+  Port: 9092 #29092
   Group: websocket_group_2
   ResponseTopic: websocket_response_topic
   ResponsePartitionsCount: 1
