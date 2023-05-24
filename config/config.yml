@@ -38,7 +38,7 @@ Topics:
   PublicTopic: websocket_public_topic
 
 Security:
-  ValidOrigins:
+  # ValidOrigins:
     # - "localhost"
     # - "127.0.0.1"
 
