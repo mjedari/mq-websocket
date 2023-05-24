@@ -2,7 +2,9 @@ package hub
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"repo.abanicon.com/abantheter-microservices/websocket/configs"
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/rooms"
 	"sync"
@@ -11,6 +13,7 @@ import (
 type Hub struct {
 	kafka           IKafkaHandler
 	rooms           sync.Map
+	clientRooms     sync.Map
 	PrivateReceiver chan PrivateMessage
 	PublicReceiver  chan KafkaMessage
 	AuthReceiver    chan KafkaMessage
@@ -35,6 +38,30 @@ func (h *Hub) GetRoom(name string, factory RoomFactory) (rooms.IRoom, error) {
 
 	r, _ := h.rooms.LoadOrStore(name, newRoom)
 	return r.(rooms.IRoom), nil
+}
+
+func (h *Hub) SetClientRoom(clientId uuid.UUID, r rooms.IRoom) error {
+	// todo: investigating which one is better here: storing instance or its pointer?
+	h.clientRooms.Store(clientId, r)
+	return nil
+}
+
+func (h *Hub) GetClientRoom(clientId uuid.UUID) (rooms.IRoom, error) {
+	r, ok := h.clientRooms.Load(clientId)
+	if !ok {
+		return nil, errors.New("not found")
+	}
+
+	if r == nil {
+		return nil, nil
+	}
+	rrr := r.(rooms.IRoom)
+	return rrr, nil
+}
+
+func (h *Hub) RemoveClientRoom(clientId uuid.UUID) error {
+	h.clientRooms.Delete(clientId)
+	return nil
 }
 
 type PrivateMessage struct {

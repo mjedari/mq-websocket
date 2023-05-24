@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
@@ -33,6 +34,7 @@ func NewPrivateHandler(hub *hub.Hub) *PrivateHandler {
 }
 
 func (h PrivateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	uid, _ := uuid.NewUUID()
 	userId := r.Context().Value("user_id").(string)
 
 	fmt.Println("user if from context", userId)
@@ -42,7 +44,7 @@ func (h PrivateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newClient := rooms.NewClient(userId, conn)
+	newClient := rooms.NewClient(uid, userId, conn)
 
 	go newClient.WriteOnConnection()
 
@@ -60,8 +62,9 @@ func (h PrivateHandler) Handle(conn *websocket.Conn, client *rooms.Client) error
 			fmt.Println("receive message from client", client, readErr)
 
 			if websocket.IsCloseError(readErr, websocket.CloseGoingAway, websocket.CloseAbnormalClosure, websocket.CloseNormalClosure) {
-				if client.Room != nil {
-					client.Room.Leave(client)
+				clientRoom, _ := h.hub.GetClientRoom(client.Id)
+				if clientRoom != nil {
+					clientRoom.Leave(client)
 				}
 			}
 			break
@@ -85,18 +88,34 @@ func (h PrivateHandler) Handle(conn *websocket.Conn, client *rooms.Client) error
 
 			fmt.Println("subscribed to channel:", r.GetName())
 			r.GetClients().Store(client, true)
+			// h.hub.GetClientRoom(clientId)
+			err = h.hub.SetClientRoom(client.Id, r)
+			if err != nil {
+				// log
+			}
 
-			client.Room = r
+			//client.Room = r
 		case "unsubscribe":
-			if client.Room != nil {
-				fmt.Println("unsubscribed to channel:", client.Room)
-				client.Room.GetClients().Delete(client)
-				client.Room = nil
+			clientRoom, _ := h.hub.GetClientRoom(client.Id)
+			if clientRoom != nil {
+				fmt.Println("unsubscribed to channel:", clientRoom)
+				clientRoom.GetClients().Delete(client)
+				_ = h.hub.RemoveClientRoom(client.Id)
 			}
+			//if client.Room != nil {
+			//	fmt.Println("unsubscribed to channel:", client.Room)
+			//	client.Room.GetClients().Delete(client)
+			//	client.Room = nil
+			//}
 		case "publish":
-			if client.Room != nil {
-				client.Room.Broadcast([]byte(msg.Data))
+			clientRoom, _ := h.hub.GetClientRoom(client.Id)
+			if clientRoom != nil {
+				clientRoom.Broadcast([]byte(msg.Data))
+
 			}
+			//if client.Room != nil {
+			//	client.Room.Broadcast([]byte(msg.Data))
+			//}
 		}
 	}
 	return nil

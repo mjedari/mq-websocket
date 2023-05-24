@@ -48,7 +48,7 @@
 * We should unsubscribe user form private channel if logged out (2)
 
 ### Prometheus' metrics:
-
+* get size of important objects like client,  clientMap, hub, rooms
 * per endpoint calls, latency  (implement with dimension and labels)
 * number of online connections
 * number of open rooms

@@ -1,20 +1,22 @@
 package rooms
 
 import (
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"log"
 )
 
 type Client struct {
+	Id     uuid.UUID
 	UserId string
 	Conn   *websocket.Conn
 	Send   chan []byte
 	Close  chan bool
-	Room   IRoom
+	//Room   IRoom
 }
 
-func NewClient(userId string, conn *websocket.Conn) *Client {
-	return &Client{UserId: userId, Conn: conn, Send: make(chan []byte), Close: make(chan bool)}
+func NewClient(id uuid.UUID, userId string, conn *websocket.Conn) *Client {
+	return &Client{Id: id, UserId: userId, Conn: conn, Send: make(chan []byte), Close: make(chan bool)}
 }
 
 func (c *Client) WriteOnConnection() {

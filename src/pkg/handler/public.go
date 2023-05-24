@@ -38,7 +38,7 @@ func (h PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newClient := rooms.NewClient(userId, conn)
+	newClient := rooms.NewClient(uid, userId, conn)
 
 	go newClient.WriteOnConnection()
 
@@ -59,7 +59,11 @@ func (h PublicHandler) Handle(conn *websocket.Conn, client *rooms.Client) error 
 
 	fmt.Printf("subscribed to %v channel: %v\n", PublicRoom, client.UserId)
 	r.GetClients().Store(client, true)
-	client.Room = r
+	//client.Room = r
+	err = h.hub.SetClientRoom(client.Id, r)
+	if err != nil {
+		// log
+	}
 
 	// wait for client if it wants to close connection
 	for {
@@ -68,8 +72,9 @@ func (h PublicHandler) Handle(conn *websocket.Conn, client *rooms.Client) error 
 			fmt.Println("receive message from client: ", client.UserId, readErr)
 
 			if websocket.IsCloseError(readErr, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				if client.Room != nil {
-					client.Room.Leave(client)
+				clientRoom, _ := h.hub.GetClientRoom(client.Id)
+				if clientRoom != nil {
+					clientRoom.Leave(client)
 				}
 			}
 			break

@@ -8,7 +8,7 @@ import (
 type Room struct {
 	Name    string
 	Clients sync.Map
-	mux     sync.Mutex
+	//mux     sync.Mutex
 }
 
 func NewRoom(name string) (*Room, error) {
