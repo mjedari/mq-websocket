@@ -29,6 +29,7 @@ func NewPublicHandler(hub *hub.Hub) *PublicHandler {
 }
 
 func (h PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Got PublicHandler")
 	uid, _ := uuid.NewUUID()
 	userId := uid.String()
 
@@ -49,6 +50,8 @@ func (h PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h PublicHandler) Handle(conn *websocket.Conn, client *rooms.Client) error {
+	fmt.Println("Got PublicHandler Handle")
+
 	r, err := h.hub.GetRoom(PublicRoom, func(name string) (rooms.IRoom, error) {
 		return rooms.NewRoom(name)
 	})
@@ -63,9 +66,12 @@ func (h PublicHandler) Handle(conn *websocket.Conn, client *rooms.Client) error 
 	err = h.hub.SetClientRoom(client.Id, r)
 	if err != nil {
 		// log
+		log.Println("error", err)
 	}
 
 	// wait for client if it wants to close connection
+	fmt.Println("Got PublicHandler wait for")
+
 	for {
 		_, _, readErr := conn.ReadMessage()
 		if readErr != nil {
