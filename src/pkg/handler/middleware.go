@@ -15,12 +15,16 @@ func SocketValidationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check if the request has the correct headers for a WebSocket connection
 		if r.Header.Get("Upgrade") != "websocket" || r.Header.Get("Connection") != "Upgrade" {
+			fmt.Println("Not a WebSocket request")
+
 			http.Error(w, "Not a WebSocket request", http.StatusBadRequest)
 			return
 		}
 
 		// check the origin of the request
 		if err := checkRequestOrigin(r); err != nil {
+			fmt.Println("Not a WebSocket valid origin")
+
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -31,6 +35,8 @@ func SocketValidationMiddleware(next http.Handler) http.Handler {
 }
 
 func RateLimiterMiddleware(next http.Handler) http.Handler {
+	fmt.Println("got rate limiter")
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !configs.Config.RateLimiter.Active {
 			next.ServeHTTP(w, r)
@@ -41,11 +47,14 @@ func RateLimiterMiddleware(next http.Handler) http.Handler {
 
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
+			fmt.Println("SplitHostPort")
+
 			http.Error(w, "invalid ip address", http.StatusInternalServerError)
 			return
 		}
 
 		if err := rateLimiter.Handle(ip); err != nil {
+			fmt.Println("StatusTooManyRequests")
 			http.Error(w, err.Error(), http.StatusTooManyRequests)
 			return
 		}
