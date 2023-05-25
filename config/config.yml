@@ -43,6 +43,6 @@ Security:
     # - "127.0.0.1"
 
 RateLimiter:
-  Active: true
+  Active: false
   Rate: 10 # per period
   Period: 1 # in minutes
