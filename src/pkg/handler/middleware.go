@@ -14,10 +14,10 @@ import (
 func SocketValidationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check if the request has the correct headers for a WebSocket connection
-		if r.Header.Get("Upgrade") != "websocket" || r.Header.Get("Connection") != "Upgrade" {
-			http.Error(w, "Not a WebSocket request", http.StatusBadRequest)
-			return
-		}
+		//if r.Header.Get("Upgrade") != "websocket" || r.Header.Get("Connection") != "Upgrade" {
+		//	http.Error(w, "Not a WebSocket request", http.StatusBadRequest)
+		//	return
+		//}
 
 		// check the origin of the request
 		if err := checkRequestOrigin(r); err != nil {
