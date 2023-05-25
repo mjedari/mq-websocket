@@ -181,7 +181,7 @@ func initHealer(ctx context.Context) {
 		for {
 			// ping constantly health of redis
 			<-time.Tick(time.Second)
-			pingErr := wiring.Wiring.Redis.Ping(ctx)
+			pingErr := wiring.Wiring.Redis.Ping(ctx).Err()
 			if pingErr == nil {
 				continue
 			}
