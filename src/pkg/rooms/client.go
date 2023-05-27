@@ -1,6 +1,7 @@
 package rooms
 
 import (
+	"context"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"log"
@@ -19,7 +20,7 @@ func NewClient(id uuid.UUID, userId string, conn *websocket.Conn) *Client {
 	return &Client{Id: id, UserId: userId, Conn: conn, Send: make(chan []byte), Close: make(chan bool)}
 }
 
-func (c *Client) WriteOnConnection() {
+func (c *Client) WriteOnConnection(ctx context.Context) {
 	defer func() {
 		c.Conn.Close()
 	}()
@@ -33,6 +34,8 @@ func (c *Client) WriteOnConnection() {
 			}
 			c.Conn.WriteMessage(websocket.TextMessage, message)
 		case <-c.Close:
+			return
+		case <-ctx.Done():
 			return
 		}
 	}

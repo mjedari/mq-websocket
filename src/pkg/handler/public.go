@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -29,9 +30,10 @@ func NewPublicHandler(hub *hub.Hub) *PublicHandler {
 }
 
 func (h PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Got PublicHandler")
 	uid, _ := uuid.NewUUID()
 	userId := uid.String()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	conn, socketErr := publicUpgrader.Upgrade(w, r, nil)
 	if socketErr != nil {
@@ -41,7 +43,7 @@ func (h PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	newClient := rooms.NewClient(uid, userId, conn)
 
-	go newClient.WriteOnConnection()
+	go newClient.WriteOnConnection(ctx)
 
 	if err := h.Handle(conn, newClient); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -50,8 +52,6 @@ func (h PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h PublicHandler) Handle(conn *websocket.Conn, client *rooms.Client) error {
-	fmt.Println("Got PublicHandler Handle")
-
 	r, err := h.hub.GetRoom(PublicRoom, func(name string) (rooms.IRoom, error) {
 		return rooms.NewRoom(name)
 	})
@@ -62,7 +62,6 @@ func (h PublicHandler) Handle(conn *websocket.Conn, client *rooms.Client) error 
 
 	fmt.Printf("subscribed to %v channel: %v\n", PublicRoom, client.UserId)
 	r.GetClients().Store(client, true)
-	//client.Room = r
 	err = h.hub.SetClientRoom(client.Id, r)
 	if err != nil {
 		// log
@@ -70,8 +69,6 @@ func (h PublicHandler) Handle(conn *websocket.Conn, client *rooms.Client) error 
 	}
 
 	// wait for client if it wants to close connection
-	fmt.Println("Got PublicHandler wait for")
-
 	for {
 		_, _, readErr := conn.ReadMessage()
 		if readErr != nil {
@@ -81,6 +78,7 @@ func (h PublicHandler) Handle(conn *websocket.Conn, client *rooms.Client) error 
 				clientRoom, _ := h.hub.GetClientRoom(client.Id)
 				if clientRoom != nil {
 					clientRoom.Leave(client)
+					_ = h.hub.RemoveClientRoom(client.Id)
 				}
 			}
 			break

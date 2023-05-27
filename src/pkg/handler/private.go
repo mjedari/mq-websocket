@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
@@ -36,6 +37,8 @@ func NewPrivateHandler(hub *hub.Hub) *PrivateHandler {
 func (h PrivateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	uid, _ := uuid.NewUUID()
 	userId := r.Context().Value("user_id").(string)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	fmt.Println("user if from context", userId)
 	conn, socketErr := upgrader.Upgrade(w, r, nil)
@@ -46,7 +49,7 @@ func (h PrivateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	newClient := rooms.NewClient(uid, userId, conn)
 
-	go newClient.WriteOnConnection()
+	go newClient.WriteOnConnection(ctx)
 
 	if err := h.Handle(conn, newClient); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -94,7 +97,6 @@ func (h PrivateHandler) Handle(conn *websocket.Conn, client *rooms.Client) error
 				// log
 			}
 
-			//client.Room = r
 		case "unsubscribe":
 			clientRoom, _ := h.hub.GetClientRoom(client.Id)
 			if clientRoom != nil {
@@ -102,20 +104,14 @@ func (h PrivateHandler) Handle(conn *websocket.Conn, client *rooms.Client) error
 				clientRoom.GetClients().Delete(client)
 				_ = h.hub.RemoveClientRoom(client.Id)
 			}
-			//if client.Room != nil {
-			//	fmt.Println("unsubscribed to channel:", client.Room)
-			//	client.Room.GetClients().Delete(client)
-			//	client.Room = nil
-			//}
-		case "publish":
-			clientRoom, _ := h.hub.GetClientRoom(client.Id)
-			if clientRoom != nil {
-				clientRoom.Broadcast([]byte(msg.Data))
 
-			}
-			//if client.Room != nil {
-			//	client.Room.Broadcast([]byte(msg.Data))
+		case "publish":
+			//clientRoom, _ := h.hub.GetClientRoom(client.Id)
+			//if clientRoom != nil {
+			//	clientRoom.Broadcast([]byte(msg.Data))
+			//
 			//}
+			break
 		}
 	}
 	return nil
