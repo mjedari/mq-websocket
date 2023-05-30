@@ -75,58 +75,68 @@ type KafkaMessage struct {
 	CorrelationId string
 }
 
-func (h *Hub) PrivateStreaming() {
+func (h *Hub) PrivateStreaming(ctx context.Context) {
+	defer fmt.Println("closing socket private streaming ...")
+
 	for {
-		msg := <-h.PrivateReceiver
-		//msg := <-privateChan
-		fmt.Println("received private message")
-		fmt.Println("rooms-id ", string(msg.Room))
-		fmt.Println("user-id: ", string(msg.UserId))
-		fmt.Println("message: ", string(msg.Message))
+		select {
+		case msg := <-h.PrivateReceiver:
+			//msg := <-privateChan
+			fmt.Println("received private message")
+			fmt.Println("rooms-id ", string(msg.Room))
+			fmt.Println("user-id: ", string(msg.UserId))
+			fmt.Println("message: ", string(msg.Message))
 
-		h.rooms.Range(func(key, value any) bool {
-			r, ok := value.(rooms.IRoom)
-			if !ok {
-				return false
-			}
-			if r.GetName() == string(msg.Room) {
-				r.PrivateSend(string(msg.UserId), msg.Message)
-			}
+			h.rooms.Range(func(key, value any) bool {
+				r, ok := value.(rooms.IRoom)
+				if !ok {
+					return false
+				}
+				if r.GetName() == string(msg.Room) {
+					r.PrivateSend(string(msg.UserId), msg.Message)
+				}
 
-			return true
-		})
-
+				return true
+			})
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
-func (h *Hub) Streaming() {
-	go h.kafka.Consume(context.Background(), configs.Config.Topics.PublicTopic, h.PublicReceiver, h.PrivateReceiver)
+func (h *Hub) Streaming(ctx context.Context) {
+	go h.kafka.Consume(ctx, configs.Config.Topics.PublicTopic, h.PublicReceiver, h.PrivateReceiver)
 
 	// listening for private channel
-	go h.PrivateStreaming()
+	go h.PrivateStreaming(ctx)
 
 	// listening for public channel
-	go h.PublicStreaming()
+	go h.PublicStreaming(ctx)
 
 }
 
-func (h *Hub) PublicStreaming() {
+func (h *Hub) PublicStreaming(ctx context.Context) {
+	defer fmt.Println("closing socket public streaming ...")
+
 	for {
-		msg := <-h.PublicReceiver
-		//wsHandler.PublicWriter(resp.Value)
+		select {
+		case msg := <-h.PublicReceiver:
+			//wsHandler.PublicWriter(resp.Value)
+			fmt.Println("received public message")
+			fmt.Println("rooms-id ", "public")
+			fmt.Println("message: ", msg.Value)
 
-		fmt.Println("received public message")
-		fmt.Println("rooms-id ", "public")
-		fmt.Println("message: ", msg.Value)
+			r, ok := h.rooms.Load("public")
+			if !ok {
+				fmt.Println("not found public channel")
+				continue
+			}
 
-		r, ok := h.rooms.Load("public")
-		if !ok {
-			fmt.Println("not found public channel")
-			continue
+			publicRoom := r.(rooms.IRoom)
+			publicRoom.Broadcast([]byte(msg.Value))
+		case <-ctx.Done():
+			return
 		}
-
-		publicRoom := r.(rooms.IRoom)
-		publicRoom.Broadcast([]byte(msg.Value))
 	}
 }
 

@@ -90,14 +90,19 @@ func (a *Auth) Authenticate(ctx context.Context, token string) (*UserToken, erro
 
 func (a *Auth) Consume(ctx context.Context) {
 	// TODO: need to generalize it
+	defer fmt.Println("closing auth listener ...")
 	topic := configs.Config.AuthServer.AuthenticationPrivateTopic
 
 	go a.kafka.ConsumeAuth(ctx, topic, a.receiver)
 
 	// waits for receiver
 	for {
-		response := <-a.receiver
-		a.handleResponse(ctx, response)
+		select {
+		case response := <-a.receiver:
+			a.handleResponse(ctx, response)
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 

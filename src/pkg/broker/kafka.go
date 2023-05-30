@@ -67,6 +67,7 @@ func (k *Kafka) CreateTopic(ctx context.Context, topics []string, partitions, re
 
 func (k *Kafka) Consume(ctx context.Context, topic string, responseChan chan hub.KafkaMessage, privateChan chan hub.PrivateMessage) {
 	logrus.Infof("consuming topic %s: %v \n", topic, responseChan)
+	defer fmt.Println("closing kafka consumer ...")
 
 	for {
 		run := true
@@ -242,6 +243,7 @@ func ConsumeHealth(ctx context.Context, topic string) (string, error) {
 
 func (k *Kafka) ConsumeAuth(ctx context.Context, topic string, responseChan chan ResponseMessage) {
 	logrus.Infof("consuming topic %s: %v \n", topic, responseChan)
+	defer fmt.Println("closing kafka auth consumer ...")
 
 	for {
 		run := true
