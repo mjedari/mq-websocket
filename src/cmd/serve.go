@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/getsentry/sentry-go"
+	"github.com/shirou/gopsutil/process"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"repo.abanicon.com/abantheter-microservices/websocket/configs"
@@ -17,6 +19,7 @@ import (
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/infra/storage"
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/rate_limiter"
 	"repo.abanicon.com/abantheter-microservices/websocket/pkg/wiring"
+	"runtime"
 	"time"
 )
 
@@ -30,11 +33,12 @@ var serveCmd = &cobra.Command{
 		serve(ctx)
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt)
-
 		<-c
 		cancel()
+		fmt.Println()
+		time.Sleep(time.Second * 10)
 		// Perform any necessary cleanup before exiting
-		log.Infof("\nShuting down...")
+		fmt.Println("Shutting down...")
 		os.Exit(0)
 	},
 }
@@ -44,6 +48,7 @@ func init() {
 }
 
 func serve(ctx context.Context) {
+	//initStatePrinter()
 	initSentry()
 	initWiring()
 	initHealer(ctx)
@@ -51,12 +56,12 @@ func serve(ctx context.Context) {
 	kafkaHealthCheck(ctx)
 
 	newHub := wiring.Wiring.Hub
-	newHub.Streaming()
+	newHub.Streaming(ctx)
 
 	auth := wiring.Wiring.GetNewAuthService()
 	go auth.Consume(ctx)
 
-	runHttpServer(ctx, newHub)
+	go runHttpServer(ctx, newHub)
 
 }
 
@@ -96,6 +101,10 @@ func kafkaHealthCheck(ctx context.Context) {
 }
 
 func runHttpServer(ctx context.Context, hub *hub.Hub) {
+	//go func() {
+	//	log.Println(http.ListenAndServe("localhost:6060", nil))
+	//}()
+
 	// init
 	newPrivateHandler := handler.NewPrivateHandler(hub)
 	privateHandler := handler.LoggerMiddleware(
@@ -119,10 +128,10 @@ func runHttpServer(ctx context.Context, hub *hub.Hub) {
 
 	server := &http.Server{Addr: address, Handler: mux}
 
-	go func() {
-		<-ctx.Done()
-		server.Shutdown(ctx)
-	}()
+	//go func() {
+	//	<-ctx.Done()
+	//	server.Shutdown(ctx)
+	//}()
 
 	err := server.ListenAndServe()
 	if err != nil {
@@ -177,18 +186,64 @@ func initSentry() {
 }
 
 func initHealer(ctx context.Context) {
+	ticker := time.NewTicker(time.Second * 10)
 	go func() {
+		defer fmt.Println("closing healer ...")
 		for {
-			// ping constantly health of redis
-			<-time.Tick(time.Second)
-			pingErr := wiring.Wiring.Redis.Ping(ctx).Err()
-			if pingErr == nil {
-				continue
-			}
+			select {
+			case <-ticker.C:
+				// ping constantly health of redis
+				pingErr := wiring.Wiring.Redis.Ping(ctx).Err()
+				if pingErr == nil {
+					continue
+				}
 
-			if err := wiring.Wiring.SetNewRedisInstance(); err != nil {
-				fmt.Errorf(err.Error())
+				if err := wiring.Wiring.SetNewRedisInstance(); err != nil {
+					fmt.Errorf(err.Error())
+				}
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()
+}
+
+func printStats() {
+	// For memory
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	// For CPU
+	pid := os.Getpid()
+	proc, err := process.NewProcess(int32(pid))
+	if err != nil {
+		fmt.Println("Error while getting process: ", err)
+		return
+	}
+
+	cpus, err := proc.Percent(0)
+	if err != nil {
+		fmt.Println("Error while getting cpu percent: ", err)
+		return
+	}
+
+	fmt.Printf("Alloc = %v MiB", bToMb(m.Alloc))
+	fmt.Printf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
+	fmt.Printf("\tSys = %v MiB", bToMb(m.Sys))
+	fmt.Printf("\tNumGC = %v\n", m.NumGC)
+	fmt.Printf("\tCPU usage = %.2f percent\n", cpus)
+}
+
+func initStatePrinter() {
+	tiker := time.NewTicker(time.Second * 5)
+	go func() {
+		for {
+			<-tiker.C
+			printStats()
+		}
+	}()
+}
+
+func bToMb(b uint64) uint64 {
+	return b / 1024 / 1024
 }

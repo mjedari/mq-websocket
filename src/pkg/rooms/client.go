@@ -22,7 +22,8 @@ func NewClient(id uuid.UUID, userId string, conn *websocket.Conn) *Client {
 
 func (c *Client) WriteOnConnection(ctx context.Context) {
 	defer func() {
-		c.Conn.Close()
+		//close(c.Close)
+		//close(c.Send)
 	}()
 
 	for {
