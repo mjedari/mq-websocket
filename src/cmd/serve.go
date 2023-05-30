@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/getsentry/sentry-go"
-	"github.com/shirou/gopsutil/process"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"net"
@@ -213,25 +212,10 @@ func printStats() {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
-	// For CPU
-	pid := os.Getpid()
-	proc, err := process.NewProcess(int32(pid))
-	if err != nil {
-		fmt.Println("Error while getting process: ", err)
-		return
-	}
-
-	cpus, err := proc.Percent(0)
-	if err != nil {
-		fmt.Println("Error while getting cpu percent: ", err)
-		return
-	}
-
 	fmt.Printf("Alloc = %v MiB", bToMb(m.Alloc))
 	fmt.Printf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
 	fmt.Printf("\tSys = %v MiB", bToMb(m.Sys))
 	fmt.Printf("\tNumGC = %v\n", m.NumGC)
-	fmt.Printf("\tCPU usage = %.2f percent\n", cpus)
 }
 
 func initStatePrinter() {
