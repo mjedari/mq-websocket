@@ -206,6 +206,23 @@ func createNewConsumer2() (*kafka.Consumer, error) {
 	return consumer, nil
 }
 
+func createHealthCheckNewConsumer() (*kafka.Consumer, error) {
+	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
+		"bootstrap.servers": net.JoinHostPort(configs.Config.Kafka.Host, configs.Config.Kafka.Port),
+		"group.id":          "group-2",
+		"auto.offset.reset": "earliest",
+		//"broker.address.family": "v4",
+		//"max.poll.interval.ms":  600000,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("create new consumer: %v\n", consumer)
+	return consumer, nil
+}
+
 func generateMessageHeaders(requestId string, responseTopic string) []kafka.Header {
 	return []kafka.Header{
 		{Key: configs.Config.Kafka.CorrelationIdKey, Value: []byte(requestId)},
@@ -214,7 +231,7 @@ func generateMessageHeaders(requestId string, responseTopic string) []kafka.Head
 }
 
 func ConsumeHealth(ctx context.Context, topic string) (string, error) {
-	newConsumer, err := createNewConsumer()
+	newConsumer, err := createHealthCheckNewConsumer()
 	if err != nil {
 		log.Println("error in consuming topic", topic, err)
 		return "", err
