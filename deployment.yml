@@ -27,7 +27,7 @@ spec:
         - name: WEBSOCKET_ENVIRONMENT
           value: production
         - name: WEBSOCKET_SERVER_HOST
-          value: "localhost"
+          value: "0.0.0.0"
         - name: WEBSOCKET_KAFKA_HOST
           value: kafka.kafka.svc.cluster.local
         - name: WEBSOCKET_KAFKA_PORT
