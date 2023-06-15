@@ -18,24 +18,24 @@ spec:
     spec:
       containers:
       - env:
-        - name: DEBUG
+        - name: WEBSOCKET_DEBUG
           value: "true"
-        - name: SENTRY_DSN
+        - name: WEBSOCKET_SENTRY_DSN
           value: 'https://331c2f339f31410496fc86f99ec1986b@sentry.abantether.info/2'
-        - name: ENVIRONMENT
+        - name: WEBSOCKET_SENTRY_SAMPLE_RATE
+          value: "0.1"
+        - name: WEBSOCKET_ENVIRONMENT
           value: production
         - name: WEBSOCKET_SERVER_HOST
           value: "0.0.0.0"
-        - name: KAFKA_HOST
+        - name: WEBSOCKET_KAFKA_HOST
           value: kafka.kafka.svc.cluster.local
-        - name: KAFKA_PORT
+        - name: WEBSOCKET_KAFKA_PORT
           value: "9092"
-        - name: REDIS_HOST
+        - name: WEBSOCKET_REDIS_HOST
           value: redis-gateway-master.redis.svc.cluster.local
-        - name: REDIS_PORT
+        - name: WEBSOCKET_REDIS_PORT
           value: "6379"
-        - name: SENTRY_SAMPLE_RATE
-          value: "0.1"
         image: repo.abanicon.com:5050/abantheter-microservices/websocket:v0.0.4
         imagePullPolicy: "Always"
         name: app
