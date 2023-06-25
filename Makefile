@@ -1,9 +1,9 @@
 run:
-	@go run $(root_path)/main.go serve
+	@cd $(root_path) && go run ./main.go serve
 
 serve:
 	@echo "fasten your belts..."
-	@$(root_path)/$(app_name) serve
+	@cd $(root_path) && ./$(app_name) serve
 
 build:
 	@cd $(root_path) && go build -o $(app_name) main.go
@@ -14,6 +14,9 @@ start: clean build serve
 clean:
 	@rm -f  $(root_path)/$(app_name)
 	@echo "project cleaned!"
+
+help:
+	@cd $(root_path) && go run ./main.go
 
 app_name:= "websocket"
 root_path:= ./src

@@ -1,0 +1,9 @@
+version: '3.5'
+
+services:
+  websocket:
+    build:
+      context: ./..
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
