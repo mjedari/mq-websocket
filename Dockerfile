@@ -8,8 +8,8 @@ RUN apk update && apk upgrade && \
 # Set the Current Working Directory inside the container
 WORKDIR /app
 
-COPY ./src/go.mod ./src/
-COPY ./src/go.sum ./src/
+COPY src/go.mod ./src/
+COPY src/go.sum ./src/
 RUN cd src && go mod download
 
 COPY ./src ./src
@@ -22,4 +22,6 @@ RUN cd src && go build -o websocket -tags musl
 EXPOSE 8080
 
 # Run the executable
-CMD ["./src/websocket", "serve"]
+WORKDIR /app/src
+
+CMD ["./websocket", "serve"]

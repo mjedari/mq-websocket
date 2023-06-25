@@ -46,3 +46,8 @@ RateLimiter:
   Active: true
   Rate: 10 # per period
   Period: 1 # in minutes
+
+Debug:
+  Active: true
+  GC: true
+  Allocation: true

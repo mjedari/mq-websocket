@@ -11,14 +11,17 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"repo.abanicon.com/abantheter-microservices/websocket/configs"
-	"repo.abanicon.com/abantheter-microservices/websocket/pkg/broker"
-	"repo.abanicon.com/abantheter-microservices/websocket/pkg/handler"
-	"repo.abanicon.com/abantheter-microservices/websocket/pkg/hub"
-	"repo.abanicon.com/abantheter-microservices/websocket/pkg/infra/storage"
-	"repo.abanicon.com/abantheter-microservices/websocket/pkg/rate_limiter"
-	"repo.abanicon.com/abantheter-microservices/websocket/pkg/wiring"
-	"runtime"
+	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
+	"repo.abanicon.com/abantheter-microservices/websocket/app/handler"
+	"repo.abanicon.com/abantheter-microservices/websocket/app/messaging"
+	"repo.abanicon.com/abantheter-microservices/websocket/app/wiring"
+	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
+	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
+	"repo.abanicon.com/abantheter-microservices/websocket/infra/broker"
+	"repo.abanicon.com/abantheter-microservices/websocket/infra/healer"
+	"repo.abanicon.com/abantheter-microservices/websocket/infra/rate_limiter"
+	"repo.abanicon.com/abantheter-microservices/websocket/infra/storage"
+	"repo.abanicon.com/abantheter-microservices/websocket/infra/utils"
 	"time"
 )
 
@@ -35,9 +38,13 @@ var serveCmd = &cobra.Command{
 		<-c
 		cancel()
 		fmt.Println()
-		time.Sleep(time.Second * 10)
+		for i := 10; i > 0; i-- {
+			time.Sleep(time.Second * 1)
+			fmt.Printf("\033[2K\rShutting down ... : %d", i)
+		}
+
 		// Perform any necessary cleanup before exiting
-		fmt.Println("Shutting down...")
+		fmt.Println("\nService exited successfully.")
 		os.Exit(0)
 	},
 }
@@ -47,63 +54,25 @@ func init() {
 }
 
 func serve(ctx context.Context) {
-	//initStatePrinter()
-	initSentry()
-	initWiring()
-	initHealer(ctx)
-	createTopics(ctx)
-	kafkaHealthCheck(ctx)
+	go func() {
+		fmt.Println(http.ListenAndServe("localhost:6000", nil))
+	}()
+	//initSentry()
+	initWiring(ctx)
+
+	// create topics and health check
 
 	newHub := wiring.Wiring.Hub
-	newHub.Streaming(ctx)
+	newKafka := wiring.Wiring.Kafka
+	newAuthService := wiring.Wiring.GetAuthService()
 
-	auth := wiring.Wiring.GetNewAuthService()
-	go auth.Consume(ctx)
+	messagingService := messaging.NewMessaging(newKafka, newHub, newAuthService)
+	messagingService.Run(ctx)
 
 	go runHttpServer(ctx, newHub)
-
-}
-
-func createTopics(ctx context.Context) {
-	kafkaConfig := configs.Config.Kafka
-
-	topics := []string{
-		configs.Config.Topics.Health,
-		configs.Config.Topics.PublicTopic,
-	}
-	kafkaAdmin := wiring.Wiring.GetKafkaAdmin()
-	if err := kafkaAdmin.CreateTopic(ctx, topics, kafkaConfig.Partitions, kafkaConfig.ReplicationFactor); err != nil {
-		panic(err)
-	}
-}
-
-func kafkaHealthCheck(ctx context.Context) {
-	healthTopic := configs.Config.Topics.Health
-	testingMessage := broker.ProduceMessage{
-		Topic:         healthTopic,
-		Key:           "health-check-key",
-		Message:       "valid-health-check-value",
-		ResponseTopic: healthTopic,
-	}
-
-	broker.Produce(ctx, testingMessage)
-
-	// Ok till here
-
-	result, err := broker.ConsumeHealth(ctx, healthTopic)
-	if err != nil {
-		panic(err)
-	}
-	if result == testingMessage.Message {
-		log.Info("Kafka is listening")
-	}
 }
 
 func runHttpServer(ctx context.Context, hub *hub.Hub) {
-	//go func() {
-	//	log.Println(http.ListenAndServe("localhost:6060", nil))
-	//}()
-
 	// init
 	newPrivateHandler := handler.NewPrivateHandler(hub)
 	privateHandler := handler.LoggerMiddleware(
@@ -139,17 +108,18 @@ func runHttpServer(ctx context.Context, hub *hub.Hub) {
 	}
 
 	// sentry just capture the main goroutine panics
-	defer func() {
-		rErr := recover()
-		if rErr != nil {
-			fmt.Println("Got Err: ", rErr)
-			sentry.CurrentHub().Recover(rErr)
-			sentry.Flush(time.Second * 5)
-		}
-	}()
+	//defer func() {
+	//	rErr := recover()
+	//	if rErr != nil {
+	//		fmt.Println("Got Err: ", rErr)
+	//		sentry.CurrentHub().Recover(rErr)
+	//		sentry.Flush(time.Second * 5)
+	//	}
+	//}()
 }
 
-func initWiring() {
+// todo move this ito infra section
+func initWiring(ctx context.Context) {
 	redisProvider, err := storage.NewRedis(configs.Config.Redis)
 	if err != nil {
 		log.Fatalf("Fatal error on create redis("+configs.Config.Redis.Host+":"+configs.Config.Redis.Port+")connection: %s \n", err)
@@ -160,11 +130,17 @@ func initWiring() {
 		log.Fatalf("Fatal error on create kafka connection: %s \n", err)
 	}
 
-	newHub := hub.NewHub(kafkaProvider)
-
 	rateLimiter := rate_limiter.NewRateLimiter(configs.Config.RateLimiter)
 
-	wiring.Wiring = wiring.NewWire(kafkaProvider, redisProvider, newHub, rateLimiter, configs.Config)
+	wiring.Wiring = wiring.NewWire(kafkaProvider, redisProvider, rateLimiter, configs.Config)
+
+	// init healer for services
+	infraHealer := healer.NewHealerService([]contracts.IProvider{redisProvider}, 1)
+	infraHealer.Start(ctx)
+
+	// register profiling
+	utils.NewProfiling(configs.Config.Debug).Register()
+
 	log.Info("wiring initialized")
 }
 
@@ -182,52 +158,4 @@ func initSentry() {
 	if err != nil {
 		log.Fatalf("sentry.Init: %s", err)
 	}
-}
-
-func initHealer(ctx context.Context) {
-	ticker := time.NewTicker(time.Second * 10)
-	go func() {
-		defer fmt.Println("closing healer ...")
-		for {
-			select {
-			case <-ticker.C:
-				// ping constantly health of redis
-				pingErr := wiring.Wiring.Redis.Ping(ctx).Err()
-				if pingErr == nil {
-					continue
-				}
-
-				if err := wiring.Wiring.SetNewRedisInstance(); err != nil {
-					fmt.Errorf(err.Error())
-				}
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-}
-
-func printStats() {
-	// For memory
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-
-	fmt.Printf("Alloc = %v MiB", bToMb(m.Alloc))
-	fmt.Printf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
-	fmt.Printf("\tSys = %v MiB", bToMb(m.Sys))
-	fmt.Printf("\tNumGC = %v\n", m.NumGC)
-}
-
-func initStatePrinter() {
-	tiker := time.NewTicker(time.Second * 5)
-	go func() {
-		for {
-			<-tiker.C
-			printStats()
-		}
-	}()
-}
-
-func bToMb(b uint64) uint64 {
-	return b / 1024 / 1024
 }

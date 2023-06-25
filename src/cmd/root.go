@@ -4,7 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"repo.abanicon.com/abantheter-microservices/websocket/configs"
+	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
 	"strings"
 )
 
@@ -30,7 +30,7 @@ func init() {
 func initConfig() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("./config")
+	viper.AddConfigPath("../config")
 
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("websocket")

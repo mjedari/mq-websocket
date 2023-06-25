@@ -22,17 +22,20 @@
 
 * [X] Give a robust nice structure before refactoring (2)
 * [X] Use viper config package to make it more deployable (-)
-
-* [ ] Security improvements like, rate limiter, filtered messages and ...
-
 * [X] Refactor public-channel to use private-channel structure (2)
 * [X] Rate limiter for incoming requests (2)
 * [X] Private Channel Authentication (2)
 * [X] Retry pattern for redis (2)
-* [ ] Metrics for prometheus (Grafana dashboard and integrate) (3)
+* [X] Security improvements like, rate limiter, filtered messages and ...
 
+* [ ] keep alive connection feature (ping/pong) (2)
+* [ ] Metrics for prometheus (Grafana dashboard and integrate) (3)
+* [ ] Circuit breaker (3)
+* [ ] Refactor circuit breaker (5)
+* [ ] Circuit breaker bug (investigating) (3)
 *
 * Centralized logging
+* Add dedicate local and production config file
 * Distributed tracing
 * Unit testing after restructuring the project ( ? )
 * investigating the potential problems of services (3)
@@ -66,57 +69,3 @@
 * block IO (read/write)
 * network usage (read/write)
 * Garbage Collection (PauseTotalNs, NumGC)
-
-- cmd
-  - root.go
-  - serve.go
-- configs
-  - config.yaml
-- pkg
-  - auth
-    - auth.go
-  - broker
-    - kafka.go
-  - contacts
-    - broker.go
-    - storage.go
-  - handler
-    - middleware.go
-    - private.go
-    - public.go
-  - hub
-    - hub.go
-    - interface.go
-  - infra
-    - storage
-      - redis.go
-  - rate_limiter
-      - limiter.go 
-  - rooms
-    - client.go
-    - interface.go
-    - limited_rooms.go
-    - filtered_rooms.go
-    - room.go
-  - utils
-    - retry.go
-  - wiring
-    - config.go
-    - wring.go
-  - main.go
-  - go.mod
-  - Makefile
-
-
-
-- app
-  - 
-- domain
-  - hub
-  - room
-  - client
-- infra
-  - storage
-    - redis.go
-  - broker
-    - kafka.go
