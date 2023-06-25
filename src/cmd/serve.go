@@ -54,10 +54,10 @@ func init() {
 }
 
 func serve(ctx context.Context) {
-	go func() {
-		fmt.Println(http.ListenAndServe("localhost:6000", nil))
-	}()
-	//initSentry()
+	//go func() {
+	//	fmt.Println(http.ListenAndServe("localhost:6000", nil))
+	//}()
+	initSentry()
 	initWiring(ctx)
 
 	// create topics and health check
@@ -108,14 +108,14 @@ func runHttpServer(ctx context.Context, hub *hub.Hub) {
 	}
 
 	// sentry just capture the main goroutine panics
-	//defer func() {
-	//	rErr := recover()
-	//	if rErr != nil {
-	//		fmt.Println("Got Err: ", rErr)
-	//		sentry.CurrentHub().Recover(rErr)
-	//		sentry.Flush(time.Second * 5)
-	//	}
-	//}()
+	defer func() {
+		rErr := recover()
+		if rErr != nil {
+			fmt.Println("Got Err: ", rErr)
+			sentry.CurrentHub().Recover(rErr)
+			sentry.Flush(time.Second * 5)
+		}
+	}()
 }
 
 // todo move this ito infra section

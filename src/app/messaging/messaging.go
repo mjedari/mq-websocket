@@ -21,14 +21,14 @@ func NewMessaging(broker contracts.IBroker, hub *hub.Hub, auth *AuthService) *Me
 }
 
 func (m *Messaging) publicFunction(userId, key, value []byte) {
-	//msg := hub.PublicMessage{
-	//	Value:         string(value),
-	//	CorrelationId: "",
-	//}
-	//
-	//// here we have all elements of message
-	//// can you send it to the right channel?
-	//m.hub.PublicReceiver <- msg
+	msg := hub.PublicMessage{
+		Value:         string(value),
+		CorrelationId: "",
+	}
+
+	// here we have all elements of message
+	// can you send it to the right channel?
+	m.hub.PublicReceiver <- msg
 }
 
 func (m *Messaging) privateFunction(userId, key, value []byte) {
