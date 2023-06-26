@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/getsentry/sentry-go"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"net"
@@ -65,8 +66,9 @@ func serve(ctx context.Context) {
 	newHub := wiring.Wiring.Hub
 	newKafka := wiring.Wiring.Kafka
 	newAuthService := wiring.Wiring.GetAuthService()
+	newMonitoring := wiring.Wiring.GetMonitoringService()
 
-	messagingService := messaging.NewMessaging(newKafka, newHub, newAuthService)
+	messagingService := messaging.NewMessaging(newKafka, newMonitoring, newHub, newAuthService)
 	messagingService.Run(ctx)
 
 	go runHttpServer(ctx, newHub)
@@ -74,12 +76,14 @@ func serve(ctx context.Context) {
 
 func runHttpServer(ctx context.Context, hub *hub.Hub) {
 	// init
-	newPrivateHandler := handler.NewPrivateHandler(hub)
+	monitoringService := wiring.Wiring.GetMonitoringService()
+
+	newPrivateHandler := handler.NewPrivateHandler(hub, monitoringService)
 	privateHandler := handler.LoggerMiddleware(
 		handler.PrivateChannelMiddleware(
 			handler.SocketValidationMiddleware(newPrivateHandler)))
 
-	newPublicHandler := handler.NewPublicHandler(hub)
+	newPublicHandler := handler.NewPublicHandler(hub, monitoringService)
 	publicHandler := handler.LoggerMiddleware(
 		handler.SocketValidationMiddleware(
 			handler.RateLimiterMiddleware(newPublicHandler)))
@@ -88,6 +92,7 @@ func runHttpServer(ctx context.Context, hub *hub.Hub) {
 	mux := http.NewServeMux()
 	mux.Handle("/", publicHandler)
 	mux.Handle("/private", privateHandler)
+	mux.Handle("/metrics", promhttp.Handler())
 
 	address := net.JoinHostPort(configs.Config.Server.Host, configs.Config.Server.Port)
 	log.WithField("HTTP_Host", configs.Config.Server.Host).
