@@ -11,13 +11,14 @@ import (
 )
 
 type Messaging struct {
-	broker contracts.IBroker
-	hub    *hub.Hub
-	auth   *AuthService
+	broker     contracts.IBroker
+	monitoring contracts.IMonitoring
+	hub        *hub.Hub
+	auth       *AuthService
 }
 
-func NewMessaging(broker contracts.IBroker, hub *hub.Hub, auth *AuthService) *Messaging {
-	return &Messaging{broker: broker, hub: hub, auth: auth}
+func NewMessaging(broker contracts.IBroker, monitoring contracts.IMonitoring, hub *hub.Hub, auth *AuthService) *Messaging {
+	return &Messaging{broker: broker, monitoring: monitoring, hub: hub, auth: auth}
 }
 
 func (m *Messaging) publicFunction(userId, key, value []byte) {
@@ -28,6 +29,7 @@ func (m *Messaging) publicFunction(userId, key, value []byte) {
 
 	// here we have all elements of message
 	// can you send it to the right channel?
+	//m.monitoring.publicMessageReceived()
 	m.hub.PublicReceiver <- msg
 }
 
@@ -40,6 +42,7 @@ func (m *Messaging) privateFunction(userId, key, value []byte) {
 
 	// here we have all elements of message
 	// can you send it to the right channel?
+	//m.publicMessageReceived.privateMessageReceived()
 	m.hub.PrivateReceiver <- msg
 }
 

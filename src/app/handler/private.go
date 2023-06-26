@@ -24,11 +24,12 @@ var privateUpgrader = websocket.Upgrader{
 
 type PrivateHandler struct {
 	hub         *hub.Hub
+	monitoring  contracts.IMonitoring
 	requestRoom *contracts.IRoom
 }
 
-func NewPrivateHandler(hub *hub.Hub) *PrivateHandler {
-	return &PrivateHandler{hub: hub}
+func NewPrivateHandler(hub *hub.Hub, monitoring contracts.IMonitoring) *PrivateHandler {
+	return &PrivateHandler{hub: hub, monitoring: monitoring}
 }
 
 func (h PrivateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -108,15 +109,17 @@ func (h PrivateHandler) Handle(ctx context.Context, client *clients.PrivateClien
 	return nil
 }
 
-func (h PrivateHandler) subscribeToRoom(client *clients.PrivateClient, r contracts.IRoom) {
-	fmt.Println("subscribed to channel:", r.GetName())
-	r.SetClient(client)
-	h.hub.SetClientRoom(client.GetId(), r)
+func (h PrivateHandler) subscribeToRoom(client *clients.PrivateClient, room contracts.IRoom) {
+	fmt.Println("subscribed to channel:", room.GetName())
+	h.monitoring.AddClientToRoom(room.GetName())
+	room.SetClient(client)
+	h.hub.SetClientRoom(client.GetId(), room)
 }
 
-func (h PrivateHandler) unSubscribeFromRoom(client *clients.PrivateClient, r contracts.IRoom) {
-	fmt.Println("unsubscribed from channel:", r.GetName())
+func (h PrivateHandler) unSubscribeFromRoom(client *clients.PrivateClient, room contracts.IRoom) {
+	fmt.Println("unsubscribed from channel:", room.GetName())
+	h.monitoring.RemoveClientFromRoom(room.GetName())
 	client.RemoveConnection()
 	h.hub.RemoveClientRoom(client.GetId())
-	r.Leave(client)
+	room.Leave(client)
 }

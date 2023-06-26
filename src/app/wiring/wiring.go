@@ -5,6 +5,7 @@ import (
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
 	"repo.abanicon.com/abantheter-microservices/websocket/infra/broker"
+	"repo.abanicon.com/abantheter-microservices/websocket/infra/monitoring"
 	"repo.abanicon.com/abantheter-microservices/websocket/infra/rate_limiter"
 )
 
@@ -13,6 +14,7 @@ var Wiring *Wire
 type Wire struct {
 	Kafka       *broker.Kafka
 	Redis       contracts.IStorage
+	Monitoring  contracts.IMonitoring
 	RateLimiter *rate_limiter.RateLimiter
 	Hub         *hub.Hub
 	Configs     configs.Configuration
@@ -20,7 +22,8 @@ type Wire struct {
 
 func NewWire(kafka *broker.Kafka, redis contracts.IStorage, limiter *rate_limiter.RateLimiter, configs configs.Configuration) *Wire {
 	newHub := hub.NewHub()
-	return &Wire{Kafka: kafka, Redis: redis, Hub: newHub, RateLimiter: limiter, Configs: configs}
+	newMonitoring := monitoring.NewPrometheus()
+	return &Wire{Kafka: kafka, Redis: redis, Monitoring: newMonitoring, Hub: newHub, RateLimiter: limiter, Configs: configs}
 }
 
 func (w *Wire) GetRateLimiter() *rate_limiter.RateLimiter {
