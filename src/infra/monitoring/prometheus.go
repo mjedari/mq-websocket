@@ -6,7 +6,8 @@ import (
 )
 
 type Prometheus struct {
-	clientsInRoom *prometheus.GaugeVec
+	clientsInRoom        *prometheus.GaugeVec
+	authenticationFailed prometheus.Counter
 }
 
 func NewPrometheus() *Prometheus {
@@ -18,7 +19,12 @@ func NewPrometheus() *Prometheus {
 		[]string{"room_name"},
 	)
 
-	return &Prometheus{clientsInRoom: clientsInRoom}
+	authenticationFailed := promauto.NewCounter(prometheus.CounterOpts{
+		Name: "failed_authentication_total",
+		Help: "Total number of failed transactions",
+	})
+
+	return &Prometheus{clientsInRoom: clientsInRoom, authenticationFailed: authenticationFailed}
 }
 
 func (p Prometheus) AddClientToRoom(room string) {
@@ -27,4 +33,8 @@ func (p Prometheus) AddClientToRoom(room string) {
 
 func (p Prometheus) RemoveClientFromRoom(room string) {
 	p.clientsInRoom.With(prometheus.Labels{"room_name": room}).Dec()
+}
+
+func (p Prometheus) AuthenticationFailed() {
+	p.authenticationFailed.Inc()
 }

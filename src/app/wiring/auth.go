@@ -5,5 +5,5 @@ import (
 )
 
 func (w *Wire) GetAuthService() *messaging.AuthService {
-	return messaging.NewAuthService(w.GetStorage(), w.GetHub())
+	return messaging.NewAuthService(w.GetStorage(), w.GetMonitoringService(), w.GetHub())
 }

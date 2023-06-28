@@ -11,6 +11,7 @@ type KafkaConfig struct {
 	Host              string
 	Port              string
 	Group             string
+	AuthsGroup        string
 	ResponseTopic     string
 	Partitions        int `mapstructure:"ResponsePartitionsCount"`
 	ReplicationFactor int `mapstructure:"ResponseReplicationFactor"`
