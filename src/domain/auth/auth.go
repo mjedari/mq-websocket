@@ -2,16 +2,23 @@ package auth
 
 import (
 	"errors"
+	"time"
 )
 
 type UserToken struct {
-	ID          string `json:"user_id"`
-	DeviceID    string `json:"device_id"`
-	AccessToken string `json:"access_token"`
+	ID          string    `json:"user_id"`
+	DeviceID    string    `json:"device_id"`
+	AccessToken string    `json:"access_token"`
+	ExpiresAt   ExpiresAt `json:"access_token_expired_at"`
 }
 
 type AuthResponse struct {
 	Token UserToken
+}
+
+func (a AuthResponse) GetExpiresTime() time.Duration {
+	timestamp := time.Unix(a.Token.ExpiresAt.Timestamp/1000, 0)
+	return timestamp.Sub(time.Now())
 }
 
 type AuthLogoutResponse struct {
@@ -20,7 +27,12 @@ type AuthLogoutResponse struct {
 }
 
 type AccessToken struct {
-	Token string
+	Token     string
+	ExpiresAt time.Duration
+}
+
+type ExpiresAt struct {
+	Timestamp int64 `json:"$date"`
 }
 
 func NewAccessToken(token string) (*AccessToken, error) {

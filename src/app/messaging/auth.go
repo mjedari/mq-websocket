@@ -9,32 +9,34 @@ import (
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/auth"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
-	"time"
 )
 
 type AuthService struct {
-	storage contracts.IStorage
-	hub     *hub.Hub
+	storage    contracts.IStorage
+	monitoring contracts.IMonitoring
+	hub        *hub.Hub
 }
 
-func NewAuthService(storage contracts.IStorage, hub *hub.Hub) *AuthService {
-	return &AuthService{storage: storage, hub: hub}
+func NewAuthService(storage contracts.IStorage, monitoring contracts.IMonitoring, hub *hub.Hub) *AuthService {
+	return &AuthService{storage: storage, monitoring: monitoring, hub: hub}
 }
 
 func (a *AuthService) Authenticate(ctx context.Context, token string) (*auth.UserToken, error) {
 	accessToken, err := auth.NewAccessToken(token)
 	if err != nil {
+		a.monitoring.AuthenticationFailed()
 		return nil, err
 	}
 
 	value := a.storage.Fetch(ctx, accessToken.Token)
 	if value == nil {
+		a.monitoring.AuthenticationFailed()
 		return nil, errors.New("user not found")
 	}
 
 	var user auth.UserToken
-	if err := json.Unmarshal(value, &user); err != nil {
-		return nil, err
+	if decodeErr := json.Unmarshal(value, &user); decodeErr != nil {
+		return nil, decodeErr
 	}
 	return &user, nil
 }
@@ -50,7 +52,7 @@ func (a *AuthService) login(ctx context.Context, message []byte) {
 		//
 	}
 
-	if err := a.storage.Store(ctx, authResponse.Token.AccessToken, string(payload), time.Hour); err != nil {
+	if err := a.storage.Store(ctx, authResponse.Token.AccessToken, string(payload), authResponse.GetExpiresTime()); err != nil {
 		// handle err
 	}
 }

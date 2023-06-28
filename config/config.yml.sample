@@ -13,6 +13,7 @@ Kafka:
   Host: kafka # 192.168.130.4
   Port: 29092 #29092
   Group: websocket_group_2
+  AuthsGroup: auth-consumer-group
   ResponseTopic: websocket_response_topic
   ResponsePartitionsCount: 1
   ResponseReplicationFactor: 1

@@ -17,6 +17,7 @@ const PollingTimeout = 100 // unit: ms
 
 type Kafka struct {
 	*kafka.AdminClient
+	config configs.KafkaConfig
 }
 
 func NewKafka(config configs.KafkaConfig) (*Kafka, error) {
@@ -29,7 +30,7 @@ func NewKafka(config configs.KafkaConfig) (*Kafka, error) {
 		return nil, err
 	}
 
-	return &Kafka{AdminClient: client}, nil
+	return &Kafka{AdminClient: client, config: config}, nil
 }
 
 type ResponseMessage struct {
@@ -68,11 +69,11 @@ func (k *Kafka) CreateTopics(ctx context.Context, topics []string, partitions, r
 func (k *Kafka) Consume(ctx context.Context, topic string, publicResponseFunction, privateResponseFunction func(header, key, value []byte)) {
 	defer fmt.Println("Closing kafka consumer...")
 	logrus.Infof("consuming topic %s: \n", topic)
-	groupId := configs.Config.Kafka.Group
+	groupId := k.config.Group
 
 	for {
 		run := true
-		consumer, err := createNewConsumer(groupId)
+		consumer, err := k.createNewConsumer(groupId)
 		if err != nil {
 			log.Println("error in consuming topic", topic, err)
 			panic(err)
@@ -157,7 +158,7 @@ func getUserId(headers []kafka.Header) []byte {
 }
 
 func (k *Kafka) Produce(ctx context.Context, message contracts.IBrokerMessage) {
-	producer, pErr := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": configs.Config.Kafka.Host + ":" + configs.Config.Kafka.Port})
+	producer, pErr := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": k.config.Host + ":" + k.config.Port})
 	if pErr != nil {
 		panic(pErr)
 	}
@@ -167,7 +168,7 @@ func (k *Kafka) Produce(ctx context.Context, message contracts.IBrokerMessage) {
 		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
 		Key:            message.GetKey(),
 		Value:          message.GetMessage(),
-		Headers:        generateMessageHeaders(message.GetRequestId(), message.GetResponseTopic()),
+		Headers:        k.generateMessageHeaders(message.GetRequestId(), message.GetResponseTopic()),
 	}
 
 	if err := producer.Produce(&newMessage, nil); err != nil {
@@ -178,9 +179,9 @@ func (k *Kafka) Produce(ctx context.Context, message contracts.IBrokerMessage) {
 	producer.Flush(15 * 1000)
 }
 
-func createNewConsumer(groupId string) (*kafka.Consumer, error) {
+func (k *Kafka) createNewConsumer(groupId string) (*kafka.Consumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": net.JoinHostPort(configs.Config.Kafka.Host, configs.Config.Kafka.Port),
+		"bootstrap.servers": net.JoinHostPort(k.config.Host, k.config.Port),
 		"group.id":          groupId,
 		"auto.offset.reset": "latest",
 		//"broker.address.family": "v4",
@@ -195,10 +196,10 @@ func createNewConsumer(groupId string) (*kafka.Consumer, error) {
 	return consumer, nil
 }
 
-func createHealthConsumer() (*kafka.Consumer, error) {
+func (k *Kafka) createHealthConsumer() (*kafka.Consumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": net.JoinHostPort(configs.Config.Kafka.Host, configs.Config.Kafka.Port),
-		"group.id":          configs.Config.Kafka.Group,
+		"bootstrap.servers": net.JoinHostPort(k.config.Host, k.config.Port),
+		"group.id":          k.config.Group,
 		"auto.offset.reset": "earliest",
 	})
 
@@ -210,15 +211,15 @@ func createHealthConsumer() (*kafka.Consumer, error) {
 	return consumer, nil
 }
 
-func generateMessageHeaders(requestId string, responseTopic string) []kafka.Header {
+func (k *Kafka) generateMessageHeaders(requestId string, responseTopic string) []kafka.Header {
 	return []kafka.Header{
-		{Key: configs.Config.Kafka.CorrelationIdKey, Value: []byte(requestId)},
-		{Key: configs.Config.Kafka.ResponseTopic, Value: []byte(responseTopic)},
+		{Key: k.config.CorrelationIdKey, Value: []byte(requestId)},
+		{Key: k.config.ResponseTopic, Value: []byte(responseTopic)},
 	}
 }
 
 func (k *Kafka) ConsumeHealth(ctx context.Context, topic string) ([]byte, error) {
-	newConsumer, err := createHealthConsumer()
+	newConsumer, err := k.createHealthConsumer()
 	if err != nil {
 		log.Println("error in consuming topic", topic, err)
 		return nil, err
@@ -253,10 +254,10 @@ func (k *Kafka) ConsumeHealth(ctx context.Context, topic string) ([]byte, error)
 func (k *Kafka) ConsumeAuth(ctx context.Context, topic string, authResponseFunction func(header, key, value []byte)) {
 	defer fmt.Println("Closing kafka auth consumer...")
 	logrus.Infof("consuming topic %s: %v \n", topic, authResponseFunction)
-	groupId := "auth-consumer-group"
+	groupId := k.config.AuthsGroup
 	for {
 		run := true
-		consumer, err := createNewConsumer(groupId)
+		consumer, err := k.createNewConsumer(groupId)
 		if err != nil {
 			log.Println("error in consuming topic", topic, err)
 			panic(err)
