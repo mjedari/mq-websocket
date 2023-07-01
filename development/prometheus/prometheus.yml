@@ -1,0 +1,6 @@
+scrape_configs:
+  - job_name: 'websocket-service'
+    scrape_interval: 5s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['host.docker.internal:8080'] #testing.abansite.com/wss, host.docker.internal:8080
