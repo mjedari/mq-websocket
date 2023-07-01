@@ -59,10 +59,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  annotations:
+    prometheus.io/scrape: 'true'
   labels:
     io.kompose.service: websocket
   name: websocket
   namespace: micro
+
 spec:
   ports:
   - name: "websocket-port"
