@@ -62,9 +62,9 @@ func (m *Messaging) Run(ctx context.Context) {
 	}
 
 	// health check
-	if err := m.HealthCheck(ctx); err != nil {
-		panic(err)
-	}
+	//if err := m.HealthCheck(ctx); err != nil {
+	//	panic(err)
+	//}
 
 	// start consuming
 	go m.broker.Consume(ctx, configs.Config.Topics.PublicTopic, m.publicFunction, m.privateFunction)
