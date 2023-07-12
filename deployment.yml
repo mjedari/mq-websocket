@@ -48,8 +48,6 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "512m"
-      nodeSelector:
-        cputype: fast
       imagePullSecrets:
       - name: regcred
       restartPolicy: Always
