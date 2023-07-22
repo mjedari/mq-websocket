@@ -3,6 +3,7 @@ image: docker/compose:latest
 stages:
   - build
   - deploy-testing
+  - deploy-alpha 
 
 variables:
   BRANCH_NAME: ${BRANCH_NAME}
@@ -37,3 +38,21 @@ deploy-testing:
   tags:
     - websocket
   stage: deploy-testing
+
+deploy-alpha:
+  variables:
+    DEBUG_MODE: "True"
+  script:
+    - BRANCH_NAME=`echo ${CI_COMMIT_REF_NAME} | sed 's/\//_/g'`
+    - docker login repo.abanicon.com:5050 -u gitlab-ci/cd -p${registery_pass}
+    - COMPOSE_HTTP_TIMEOUT=120 docker-compose -H "ssh://alpha" pull
+    - COMPOSE_HTTP_TIMEOUT=120 docker-compose -H "ssh://alpha" down
+    - COMPOSE_HTTP_TIMEOUT=120 docker-compose -H "ssh://alpha" up -d
+    - sleep 2
+    - COMPOSE_HTTP_TIMEOUT=120 docker-compose -H "ssh://alpha" top
+  only:
+    - alpha
+  tags:
+    - websocket
+  stage: deploy-alpha
+
