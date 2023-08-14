@@ -42,12 +42,13 @@ spec:
         ports:
         - containerPort: 8080
         resources:
-          requests:
-            memory: "512Mi"
-            cpu: "64m"
           limits:
-            memory: "1Gi"
             cpu: "512m"
+            memory: "1Gi"
+          requests:
+            cpu: "64m"
+            memory: "512Mi"
+
       imagePullSecrets:
       - name: regcred
       restartPolicy: Always
