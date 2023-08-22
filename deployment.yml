@@ -6,7 +6,7 @@ metadata:
   name: websocket
   namespace: micro
 spec:
-  replicas: 1
+  replicas: 8
   selector:
     matchLabels:
       io.kompose.service: websocket
@@ -43,11 +43,11 @@ spec:
         - containerPort: 8080
         resources:
           limits:
-            cpu: "512m"
-            memory: "1Gi"
+            cpu: 1000m
+            memory: 1Gi
           requests:
-            cpu: "64m"
-            memory: "512Mi"
+            cpu: 512m
+            memory: 512Mi
 
       imagePullSecrets:
       - name: regcred
