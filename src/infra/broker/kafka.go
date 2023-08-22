@@ -79,9 +79,11 @@ func (k *Kafka) Consume(ctx context.Context, topic string, publicResponseFunctio
 			panic(err)
 		}
 
-		if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
-			logrus.Error("failed to close subscriber:", subscribeErr)
-		}
+		//if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
+		//	logrus.Error("failed to close subscriber:", subscribeErr)
+		//}
+
+		k.assignConsumerToTopic(topic, 0, consumer)
 
 		for run == true {
 			select {
@@ -263,9 +265,11 @@ func (k *Kafka) ConsumeAuth(ctx context.Context, topic string, authResponseFunct
 			panic(err)
 		}
 
-		if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
-			logrus.Error("failed to close subscriber:", subscribeErr)
-		}
+		//if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
+		//	logrus.Error("failed to close subscriber:", subscribeErr)
+		//}
+		// assign the consumer to the specific partition of the topic
+		k.assignConsumerToTopic(topic, 0, consumer)
 
 		for run == true {
 			select {
@@ -299,4 +303,16 @@ func (k *Kafka) ConsumeAuth(ctx context.Context, topic string, authResponseFunct
 			}
 		}
 	}
+}
+
+func (k *Kafka) assignConsumerToTopic(topic string, partition int, consumer *kafka.Consumer) {
+	partitions := []kafka.TopicPartition{
+		{Topic: &topic, Partition: int32(partition)},
+	}
+	assignErr := consumer.Assign(partitions)
+	if assignErr != nil {
+		logrus.Fatalf("failed to assign consumer %v to partition %v \n", consumer, partition)
+	}
+
+	fmt.Printf("consumer %v assigned to partition: %v \n", consumer, partition)
 }
