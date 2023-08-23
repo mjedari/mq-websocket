@@ -2,7 +2,7 @@ image: docker/compose:latest
 
 stages:
   - build
-  - deploy-testing
+  - deploy-develop
   - deploy-alpha 
 
 variables:
@@ -19,7 +19,7 @@ build:
     - websocket
   stage: build
 
-deploy-testing:
+deploy-develop:
   variables:
     ABAN_BACKEND_DEBUG_MODE: "True"
   script:
@@ -31,13 +31,13 @@ deploy-testing:
     - sleep 5
     - COMPOSE_HTTP_TIMEOUT=120 docker-compose -H "ssh://testing" top
   only:
-    - main
+    - develop
   # except:
   #   changes:
   #     - "*.md"
   tags:
     - websocket
-  stage: deploy-testing
+  stage: deploy-develop
 
 deploy-alpha:
   variables:
