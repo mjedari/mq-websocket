@@ -48,7 +48,8 @@ spec:
           requests:
             cpu: 512m
             memory: 512Mi
-
+      nodeSelector:
+        servicetype: micro
       imagePullSecrets:
       - name: regcred
       restartPolicy: Always
