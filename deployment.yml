@@ -83,7 +83,12 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt
     certmanager.k8s.io/acme-http01-edit-in-place: "false"
     kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://abantether.com, https://abanchange.me"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: PUT, GET, POST, OPTIONS, DELETE, PATCH
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+
   name: websocket
   namespace: micro
 spec:
