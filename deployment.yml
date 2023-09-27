@@ -84,7 +84,23 @@ metadata:
     certmanager.k8s.io/acme-http01-edit-in-place: "false"
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/configuration-snippet: |
-       more_set_headers "Access-Control-Allow-Origin: $http_origin";
+        if ($request_method = 'OPTIONS') {
+           add_header 'Access-Control-Allow-Origin' '$http_origin' always;
+           add_header 'Access-Control-Allow-Methods' 'DELETE, GET, POST, PUT, OPTIONS, PATCH'  always;
+           add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,token' always;
+           add_header 'Access-Control-Max-Age' 1728000 always;
+           add_header 'Content-Type' 'text/plain; charset=utf-8' always;
+           add_header 'Content-Length' 0;
+           add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,token,Authorization' always;
+           add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range,token,Authorization' always;
+           add_header 'Access-Control-Allow-Credentials' 'true' always;
+           return 204;
+        }
+        add_header 'Access-Control-Allow-Origin' '$http_origin' always;
+        add_header 'Access-Control-Allow-Methods' 'PATCH, DELETE, GET, POST, PUT, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,token,Authorization' always;
+        add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range,token,Authorization' always;
+        add_header 'Access-Control-Allow-Credentials' 'true' always;
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
 
   name: websocket
