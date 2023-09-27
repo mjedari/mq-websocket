@@ -83,7 +83,8 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt
     certmanager.k8s.io/acme-http01-edit-in-place: "false"
     kubernetes.io/tls-acme: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://abantether.com, https://abanchange.me"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+       more_set_headers "Access-Control-Allow-Origin: $http_origin";
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
 
   name: websocket
