@@ -23,7 +23,8 @@ func NewMessaging(broker contracts.IBroker, monitoring contracts.IMonitoring, hu
 
 func (m *Messaging) publicFunction(userId, key, value []byte) {
 	msg := hub.PublicMessage{
-		Value:         string(value),
+		Room:          key,
+		Message:       value,
 		CorrelationId: "",
 	}
 
@@ -131,8 +132,8 @@ func (m *Messaging) privateStreaming(ctx context.Context) {
 			fmt.Println("user-id: ", string(msg.UserId))
 			fmt.Println("message: ", string(msg.Message))
 
-			m.hub.Rooms.Range(func(key, value any) bool {
-				r, ok := value.(contracts.IRoom)
+			m.hub.PrivateRooms.Range(func(key, value any) bool {
+				r, ok := value.(contracts.IPrivateRoom)
 				if !ok {
 					return false
 				}
@@ -154,18 +155,26 @@ func (m *Messaging) publicStreaming(ctx context.Context) {
 	for {
 		select {
 		case msg := <-m.hub.PublicReceiver:
+			// add timeout here
 			fmt.Println("received public message")
-			fmt.Println("rooms-id ", "public")
-			fmt.Println("message: ", msg.Value)
+			fmt.Println("rooms-id ", string(msg.Room))
+			fmt.Println("message: ", string(msg.Message))
 
-			r, ok := m.hub.Rooms.Load("public")
-			if !ok {
-				fmt.Println("not found public channel")
-				continue
-			}
+			// iterate over all rooms and find which one is public through reflect package
+			m.hub.PublicRooms.Range(func(key, value any) bool {
+				r, ok := value.(contracts.IPublicRoom)
+				if !ok {
+					fmt.Println("not found public channel")
+					// Note: return false or continue?
+					return true
+				}
+				if r.GetName() == string(msg.Room) {
+					r.Broadcast(msg.Message)
+				}
 
-			publicRoom := r.(contracts.IRoom)
-			publicRoom.Broadcast([]byte(msg.Value))
+				return true
+			})
+
 		case <-ctx.Done():
 			return
 		}
@@ -173,7 +182,7 @@ func (m *Messaging) publicStreaming(ctx context.Context) {
 }
 
 func (m *Messaging) LeaveClient(ctx context.Context, userId string) {
-	m.hub.Rooms.Range(func(room, anyRoom any) bool {
+	m.hub.PrivateRooms.Range(func(room, anyRoom any) bool {
 		r, ok := anyRoom.(contracts.IRoom)
 		if !ok {
 			return false

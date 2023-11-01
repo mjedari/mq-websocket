@@ -6,9 +6,17 @@ import (
 
 type IRoom interface {
 	GetName() string
-	Broadcast(message []byte)
-	PrivateSend(userId string, message []byte)
 	GetClients() *sync.Map
 	Leave(c IClient)
 	SetClient(client IClient)
+}
+
+type IPublicRoom interface {
+	IRoom
+	Broadcast(message []byte)
+}
+
+type IPrivateRoom interface {
+	IRoom
+	PrivateSend(userId string, message []byte)
 }

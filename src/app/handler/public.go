@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
@@ -9,10 +10,9 @@ import (
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/clients"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
+	"repo.abanicon.com/abantheter-microservices/websocket/domain/messaging"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/rooms"
 )
-
-const PublicRoom = "public"
 
 var publicUpgrader = websocket.Upgrader{
 	ReadBufferSize:  0,
@@ -25,6 +25,8 @@ var publicUpgrader = websocket.Upgrader{
 type PublicHandler struct {
 	hub        *hub.Hub
 	monitoring contracts.IMonitoring
+	// todo: check this out: requestRooms []*contracts.IPublicRoom
+	requestRooms []contracts.IRoom
 }
 
 func NewPublicHandler(hub *hub.Hub, monitoring contracts.IMonitoring) *PublicHandler {
@@ -56,37 +58,60 @@ func (h PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h PublicHandler) Handle(ctx context.Context, client *clients.PublicClient) error {
-	r, err := h.hub.GetRoom(PublicRoom, func(name string) (contracts.IRoom, error) {
-		return rooms.NewRoom(name)
-	})
-
-	if err != nil {
-		return err
-	}
-
-	h.subscribeToRoom(client, r)
-
 	defer func() {
-		h.unSubscribeFromRoom(client, r)
 		if client.Socket != nil {
 			client.Socket.Close()
 		}
+		if len(h.requestRooms) > 0 {
+			client.Leave()
+			client.RemoveConnection()
+			h.unSubscribeFromRoom(client, h.requestRooms...)
+		}
 	}()
 
-	// wait for client if it wants to close connection
 	for {
-		select {
-		default:
-			_, _, readErr := client.Socket.ReadMessage()
-			if readErr != nil {
-				fmt.Println("receive message from client: ", client.GetId(), readErr)
-				// we can decide what to do *additionally* with every close error be received by this function
-				return nil
+		_, p, readErr := client.Socket.ReadMessage()
+		if readErr != nil {
+			fmt.Println("receive public connection message: ", readErr)
+			// todo: unsubscribe from all the rooms
+			break
+		}
+
+		var msg messaging.Message
+		if jsonErr := json.Unmarshal(p, &msg); jsonErr != nil {
+			continue
+		}
+
+		switch msg.Action {
+		case "subscribe":
+			// can initiate a filtered rooms to remove sensitive information
+			room, err := h.hub.GetPublicRoom(msg.Channel, func(name string) (contracts.IPublicRoom, error) {
+				return rooms.NewPublicRoom(name)
+			})
+
+			// note: check this because it is not no longer a pointer *room
+			h.requestRooms = append(h.requestRooms, room)
+
+			if err != nil {
+				// todo: handle this: decide to return error or continue
+				return err
 			}
-		case <-ctx.Done():
-			return nil
+			h.subscribeToRoom(client, room)
+
+		case "unsubscribe":
+			room, err := h.hub.GetPublicRoom(msg.Channel, nil)
+			if err != nil {
+				// todo: log the error and wait to next command
+				continue
+			}
+
+			h.unSubscribeFromRoom(client, room)
+
+		case "publish":
+			// it is not featured to be implemented
 		}
 	}
+	return nil
 }
 
 func (h PublicHandler) subscribeToRoom(client *clients.PublicClient, room contracts.IRoom) {
@@ -96,10 +121,12 @@ func (h PublicHandler) subscribeToRoom(client *clients.PublicClient, room contra
 	h.hub.SetClientRoom(client.GetId(), room)
 }
 
-func (h PublicHandler) unSubscribeFromRoom(client *clients.PublicClient, room contracts.IRoom) {
-	fmt.Println("unsubscribed from channel:", room.GetName())
-	h.monitoring.RemoveClientFromRoom(room.GetName())
-	client.RemoveConnection()
-	h.hub.RemoveClientRoom(client.GetId())
-	room.Leave(client)
+func (h PublicHandler) unSubscribeFromRoom(client *clients.PublicClient, rooms ...contracts.IRoom) {
+	for _, room := range rooms {
+		fmt.Println("unsubscribed from channel:", room.GetName())
+		h.monitoring.RemoveClientFromRoom(room.GetName())
+		//client.RemoveConnection()
+		h.hub.RemoveClientRoom(client.GetId())
+		room.Leave(client)
+	}
 }

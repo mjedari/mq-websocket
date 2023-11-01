@@ -11,7 +11,7 @@ type BaseRoom struct {
 	Clients sync.Map
 }
 
-func NewRoom(name string) (*BaseRoom, error) {
+func NewBaseRoom(name string) (*BaseRoom, error) {
 	// you can set some rules to prevent get new rooms by returning err
 	return &BaseRoom{Name: name}, nil
 }
@@ -24,46 +24,11 @@ func (r *BaseRoom) GetClients() *sync.Map {
 	return &r.Clients
 }
 
-func (r *BaseRoom) Broadcast(message []byte) {
-	var clientNumbers uint64
-
-	r.Clients.Range(func(key, value any) bool {
-		clientNumbers++
-
-		c, ok := value.(contracts.IClient)
-		if !ok {
-			return false
-		}
-		//fmt.Println("published by streaming on clients:", c.Id)
-		c.SendMessage(message)
-		return true
-	})
-	fmt.Printf("broadcasted to #%v clients\n", clientNumbers)
-}
-
-func (r *BaseRoom) PrivateSend(userId string, message []byte) {
-	var clientNumbers uint64
-	r.Clients.Range(func(key, value any) bool {
-		clientNumbers++
-		c, ok := value.(contracts.IClient)
-		if !ok {
-			return false
-		}
-
-		if c.Check(userId) {
-			//fmt.Println("published by streaming on clients privately:", c.UserId)
-			c.SendMessage(message)
-		}
-
-		return true
-	})
-	fmt.Printf("published to #%v private clients\n", clientNumbers)
-}
-
 func (r *BaseRoom) Leave(client contracts.IClient) {
 	fmt.Printf("user \"%v\" is leaving \"%v\" rooms \n", "", r.Name) //todo: fix this
 
-	client.Leave()
+	// todo: find out does commenting below line make memory leak or not
+	//client.Leave()
 
 	// remove client from room list
 	r.Clients.Delete(client.GetId())

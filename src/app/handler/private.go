@@ -25,7 +25,7 @@ var privateUpgrader = websocket.Upgrader{
 type PrivateHandler struct {
 	hub         *hub.Hub
 	monitoring  contracts.IMonitoring
-	requestRoom *contracts.IRoom
+	requestRoom *contracts.IPrivateRoom
 }
 
 func NewPrivateHandler(hub *hub.Hub, monitoring contracts.IMonitoring) *PrivateHandler {
@@ -85,8 +85,8 @@ func (h PrivateHandler) Handle(ctx context.Context, client *clients.PrivateClien
 		switch msg.Action {
 		case "subscribe":
 			// can initiate a filtered rooms to remove sensitive information
-			room, err := h.hub.GetRoom(msg.Channel, func(name string) (contracts.IRoom, error) {
-				return rooms.NewRoom(name)
+			room, err := h.hub.GetPrivateRoom(msg.Channel, func(name string) (contracts.IPrivateRoom, error) {
+				return rooms.NewPrivateRoom(name)
 			})
 
 			h.requestRoom = &room
