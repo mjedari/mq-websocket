@@ -5,19 +5,21 @@ import (
 	"time"
 )
 
-type RateLimitedRoom struct {
-	*BaseRoom
+type RateLimitedPublicRoom struct {
+	*PublicRoom
 	rate     int
 	lastSent time.Time
 	messages int
 	mux      sync.Mutex
 }
 
-func NewRateLimitedRoom(name string, ratePerMinute int) (*RateLimitedRoom, error) {
+func NewRateLimitedPublicRoom(name string, ratePerMinute int) (*RateLimitedPublicRoom, error) {
 	// you can set some rules to prevent get new rooms by returning err
-	return &RateLimitedRoom{
-		BaseRoom: &BaseRoom{
-			Name: name,
+	return &RateLimitedPublicRoom{
+		PublicRoom: &PublicRoom{
+			BaseRoom: &BaseRoom{
+				Name: name,
+			},
 		},
 		rate:     ratePerMinute,
 		lastSent: time.Now(),
@@ -25,7 +27,7 @@ func NewRateLimitedRoom(name string, ratePerMinute int) (*RateLimitedRoom, error
 	}, nil
 }
 
-func (rlr *RateLimitedRoom) Broadcast(message []byte) {
+func (rlr *RateLimitedPublicRoom) Broadcast(message []byte) {
 	rlr.mux.Lock()
 	defer rlr.mux.Unlock()
 
@@ -36,7 +38,7 @@ func (rlr *RateLimitedRoom) Broadcast(message []byte) {
 	}
 
 	if rlr.messages < rlr.rate {
-		rlr.BaseRoom.Broadcast(message)
+		rlr.PublicRoom.Broadcast(message)
 		rlr.messages++
 	}
 }
