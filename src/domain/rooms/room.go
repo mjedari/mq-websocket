@@ -24,15 +24,15 @@ func (r *BaseRoom) GetClients() *sync.Map {
 	return &r.Clients
 }
 
-func (r *BaseRoom) Leave(client contracts.IClient) {
+func (r *BaseRoom) Leave(client contracts.IClient) bool {
 	fmt.Printf("user \"%v\" is leaving \"%v\" rooms \n", "", r.Name) //todo: fix this
 
 	// todo: find out does commenting below line make memory leak or not
 	//client.Leave()
 
 	// remove client from room list
-	r.Clients.Delete(client.GetId())
-
+	_, existed := r.Clients.LoadAndDelete(client.GetId())
+	return existed
 }
 
 func (r *BaseRoom) SetClient(client contracts.IClient) {

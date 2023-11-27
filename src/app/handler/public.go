@@ -12,6 +12,7 @@ import (
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/messaging"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/rooms"
+	"sync"
 )
 
 var publicUpgrader = websocket.Upgrader{
@@ -26,14 +27,14 @@ type PublicHandler struct {
 	hub        *hub.Hub
 	monitoring contracts.IMonitoring
 	// todo: check this out: requestRooms []*contracts.IPublicRoom
-	requestRooms []contracts.IRoom
+	requestRooms sync.Map
 }
 
 func NewPublicHandler(hub *hub.Hub, monitoring contracts.IMonitoring) *PublicHandler {
 	return &PublicHandler{hub: hub, monitoring: monitoring}
 }
 
-func (h PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -57,23 +58,28 @@ func (h PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (h PublicHandler) Handle(ctx context.Context, client *clients.PublicClient) error {
+func (h *PublicHandler) Handle(ctx context.Context, client *clients.PublicClient) error {
 	defer func() {
 		if client.Socket != nil {
 			client.Socket.Close()
 		}
-		if len(h.requestRooms) > 0 {
-			client.Leave()
-			client.RemoveConnection()
-			h.unSubscribeFromRoom(client, h.requestRooms...)
-		}
+		client.Leave()
+		client.RemoveConnection()
+
+		h.requestRooms.Range(func(key, value any) bool {
+			room, ok := value.(contracts.IRoom)
+			if !ok {
+				return false
+			}
+			h.unSubscribeFromRoom(client, room)
+			return true
+		})
 	}()
 
 	for {
 		_, p, readErr := client.Socket.ReadMessage()
 		if readErr != nil {
 			fmt.Println("receive public connection message: ", readErr)
-			// todo: unsubscribe from all the rooms
 			break
 		}
 
@@ -90,8 +96,7 @@ func (h PublicHandler) Handle(ctx context.Context, client *clients.PublicClient)
 			})
 
 			// note: check this because it is not no longer a pointer *room
-			h.requestRooms = append(h.requestRooms, room)
-
+			h.requestRooms.Store(room.GetName(), room)
 			if err != nil {
 				// todo: handle this: decide to return error or continue
 				return err
@@ -114,19 +119,21 @@ func (h PublicHandler) Handle(ctx context.Context, client *clients.PublicClient)
 	return nil
 }
 
-func (h PublicHandler) subscribeToRoom(client *clients.PublicClient, room contracts.IRoom) {
+func (h *PublicHandler) subscribeToRoom(client *clients.PublicClient, room contracts.IRoom) {
 	fmt.Println("subscribed to channel:", room.GetName())
 	h.monitoring.AddClientToRoom(room.GetName())
 	room.SetClient(client)
 	h.hub.SetClientRoom(client.GetId(), room)
 }
 
-func (h PublicHandler) unSubscribeFromRoom(client *clients.PublicClient, rooms ...contracts.IRoom) {
+func (h *PublicHandler) unSubscribeFromRoom(client *clients.PublicClient, rooms ...contracts.IRoom) {
 	for _, room := range rooms {
 		fmt.Println("unsubscribed from channel:", room.GetName())
-		h.monitoring.RemoveClientFromRoom(room.GetName())
 		//client.RemoveConnection()
 		h.hub.RemoveClientRoom(client.GetId())
-		room.Leave(client)
+		existed := room.Leave(client)
+		if existed {
+			h.monitoring.RemoveClientFromRoom(room.GetName())
+		}
 	}
 }

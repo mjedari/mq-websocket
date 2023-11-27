@@ -30,7 +30,7 @@ func (m *Messaging) publicFunction(userId, key, value []byte) {
 
 	// here we have all elements of message
 	// can you send it to the right channel?
-	//m.monitoring.publicMessageReceived()
+	m.monitoring.MessageReceived(string(key), "public")
 	m.hub.PublicReceiver <- msg
 }
 
@@ -43,7 +43,7 @@ func (m *Messaging) privateFunction(userId, key, value []byte) {
 
 	// here we have all elements of message
 	// can you send it to the right channel?
-	//m.publicMessageReceived.privateMessageReceived()
+	m.monitoring.MessageReceived(string(key), "private")
 	m.hub.PrivateReceiver <- msg
 }
 
@@ -155,7 +155,8 @@ func (m *Messaging) publicStreaming(ctx context.Context) {
 	for {
 		select {
 		case msg := <-m.hub.PublicReceiver:
-			// add timeout here
+			// todo: this should be resilient to time.Sleep
+			//time.Sleep(time.Minute)
 			fmt.Println("received public message")
 			fmt.Println("rooms-id ", string(msg.Room))
 			fmt.Println("message: ", string(msg.Message))
@@ -165,8 +166,7 @@ func (m *Messaging) publicStreaming(ctx context.Context) {
 				r, ok := value.(contracts.IPublicRoom)
 				if !ok {
 					fmt.Println("not found public channel")
-					// Note: return false or continue?
-					return true
+					return false
 				}
 				if r.GetName() == string(msg.Room) {
 					r.Broadcast(msg.Message)
