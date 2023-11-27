@@ -79,11 +79,11 @@ func (k *Kafka) Consume(ctx context.Context, topic string, publicResponseFunctio
 			panic(err)
 		}
 
-		//if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
-		//	logrus.Error("failed to close subscriber:", subscribeErr)
-		//}
+		if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
+			logrus.Error("failed to close subscriber:", subscribeErr)
+		}
 
-		k.assignConsumerToTopic(topic, 0, consumer)
+		//k.assignConsumerToTopic(topic, 0, consumer)
 
 		for run == true {
 			select {
@@ -183,11 +183,14 @@ func (k *Kafka) Produce(ctx context.Context, message contracts.IBrokerMessage) {
 
 func (k *Kafka) createNewConsumer(groupId string) (*kafka.Consumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": net.JoinHostPort(k.config.Host, k.config.Port),
-		"group.id":          groupId,
-		"auto.offset.reset": "latest",
+		"bootstrap.servers":             net.JoinHostPort(k.config.Host, k.config.Port),
+		"group.id":                      groupId,
+		"auto.offset.reset":             "latest",
+		"partition.assignment.strategy": "cooperative-sticky",
 		//"broker.address.family": "v4",
-		//"max.poll.interval.ms":  600000,
+		// todo: this is for test in develop, pls remove
+		"max.poll.interval.ms": "10000",
+		"session.timeout.ms":   "10000",
 	})
 
 	if err != nil {
@@ -265,11 +268,11 @@ func (k *Kafka) ConsumeAuth(ctx context.Context, topic string, authResponseFunct
 			panic(err)
 		}
 
-		//if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
-		//	logrus.Error("failed to close subscriber:", subscribeErr)
-		//}
+		if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
+			logrus.Error("failed to close subscriber:", subscribeErr)
+		}
 		// assign the consumer to the specific partition of the topic
-		k.assignConsumerToTopic(topic, 0, consumer)
+		//k.assignConsumerToTopic(topic, 0, consumer)
 
 		for run == true {
 			select {

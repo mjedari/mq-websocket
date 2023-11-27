@@ -16,12 +16,13 @@ services:
       - "8081:8080" # Forward the exposed port 8080 on the container to port 8080 on the host machine
     restart: unless-stopped
     environment: # Pass environment variables to the service
-       KAFKA_HOST: ${KAFKA_HOST}
-       KAFKA_PORT: ${KAFKA_PORT}
-       ENVIRONMENT: ${ENVIRONMENT}
-       DEBUG: "true"
-       REDIS_HOST: ${REDIS_HOST}
-       REDIS_PORT: ${REDIS_PORT}
+      KAFKA_HOST: ${KAFKA_HOST}
+      KAFKA_PORT: ${KAFKA_PORT}
+      ENVIRONMENT: ${ENVIRONMENT}
+      DEBUG: "true"
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      WEBSOCKET_KAFKA_GROUP: "websocket-testing-group"
 
 networks:
   default:

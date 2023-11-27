@@ -7,7 +7,7 @@ import (
 type IRoom interface {
 	GetName() string
 	GetClients() *sync.Map
-	Leave(c IClient)
+	Leave(c IClient) bool
 	SetClient(client IClient)
 }
 
