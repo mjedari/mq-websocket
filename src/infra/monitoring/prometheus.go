@@ -7,6 +7,7 @@ import (
 
 type Prometheus struct {
 	clientsInRoom        *prometheus.GaugeVec
+	onlineConnections    *prometheus.GaugeVec
 	messagesReceived     *prometheus.CounterVec
 	authenticationFailed prometheus.Counter
 }
@@ -18,6 +19,14 @@ func NewPrometheus() *Prometheus {
 			Help: "Number of clients in each room",
 		},
 		[]string{"room_name"},
+	)
+
+	onlineConnections := promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "online_connections",
+			Help: "Number of ope connections",
+		},
+		[]string{"type"},
 	)
 
 	messagesReceived := promauto.NewCounterVec(
@@ -33,7 +42,7 @@ func NewPrometheus() *Prometheus {
 		Help: "Total number of failed transactions",
 	})
 
-	return &Prometheus{clientsInRoom: clientsInRoom, messagesReceived: messagesReceived, authenticationFailed: authenticationFailed}
+	return &Prometheus{onlineConnections: onlineConnections, clientsInRoom: clientsInRoom, messagesReceived: messagesReceived, authenticationFailed: authenticationFailed}
 }
 
 func (p Prometheus) AddClientToRoom(room string) {
@@ -50,4 +59,12 @@ func (p Prometheus) AuthenticationFailed() {
 
 func (p Prometheus) MessageReceived(room, kind string) {
 	p.messagesReceived.With(prometheus.Labels{"room": room, "type": kind}).Inc()
+}
+
+func (p Prometheus) AddConnection(kind string) {
+	p.onlineConnections.With(prometheus.Labels{"type": kind}).Inc()
+}
+
+func (p Prometheus) RemoveConnection(kind string) {
+	p.onlineConnections.With(prometheus.Labels{"type": kind}).Dec()
 }

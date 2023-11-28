@@ -59,6 +59,8 @@ func (h *PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PublicHandler) Handle(ctx context.Context, client *clients.PublicClient) error {
+	h.monitoring.AddConnection("public")
+
 	defer func() {
 		if client.Socket != nil {
 			client.Socket.Close()
@@ -74,6 +76,8 @@ func (h *PublicHandler) Handle(ctx context.Context, client *clients.PublicClient
 			h.unSubscribeFromRoom(client, room)
 			return true
 		})
+
+		h.monitoring.RemoveConnection("public")
 	}()
 
 	for {
