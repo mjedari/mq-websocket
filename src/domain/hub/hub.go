@@ -8,7 +8,8 @@ import (
 )
 
 type Hub struct {
-	Rooms           sync.Map
+	PublicRooms     sync.Map
+	PrivateRooms    sync.Map
 	clientRooms     sync.Map
 	PrivateReceiver chan PrivateMessage
 	PublicReceiver  chan PublicMessage
@@ -25,14 +26,29 @@ func NewHub() *Hub {
 
 type RoomFactory func(name string) (contracts.IRoom, error) // todo: use this
 
-func (h *Hub) GetRoom(name string, factory func(name string) (contracts.IRoom, error)) (contracts.IRoom, error) {
+func (h *Hub) GetPrivateRoom(name string, factory func(name string) (contracts.IPrivateRoom, error)) (contracts.IPrivateRoom, error) {
 	newRoom, err := factory(name)
 	if err != nil {
 		return nil, err
 	}
 
-	r, _ := h.Rooms.LoadOrStore(name, newRoom)
-	return r.(contracts.IRoom), nil
+	r, _ := h.PrivateRooms.LoadOrStore(name, newRoom)
+	return r.(contracts.IPrivateRoom), nil
+}
+
+func (h *Hub) GetPublicRoom(name string, factory func(name string) (contracts.IPublicRoom, error)) (contracts.IPublicRoom, error) {
+	if factory == nil {
+		r, _ := h.PublicRooms.Load(name)
+		return r.(contracts.IPublicRoom), nil
+	}
+
+	newRoom, err := factory(name)
+	if err != nil {
+		return nil, err
+	}
+
+	r, _ := h.PublicRooms.LoadOrStore(name, newRoom)
+	return r.(contracts.IPublicRoom), nil
 }
 
 func (h *Hub) SetClientRoom(clientId uuid.UUID, r contracts.IRoom) {
@@ -66,7 +82,8 @@ type PrivateMessage struct {
 }
 
 type PublicMessage struct {
-	Value         string
+	Room          []byte
+	Message       []byte
 	CorrelationId string
 }
 
