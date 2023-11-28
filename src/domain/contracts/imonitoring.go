@@ -5,4 +5,6 @@ type IMonitoring interface {
 	RemoveClientFromRoom(room string)
 	AuthenticationFailed()
 	MessageReceived(room, kind string)
+	AddConnection(kind string)
+	RemoveConnection(kind string)
 }

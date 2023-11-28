@@ -60,6 +60,8 @@ func (h PrivateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h PrivateHandler) Handle(ctx context.Context, client *clients.PrivateClient) error {
+	h.monitoring.AddConnection("private")
+
 	defer func() {
 		if client.Socket != nil {
 			client.Socket.Close()
@@ -67,6 +69,8 @@ func (h PrivateHandler) Handle(ctx context.Context, client *clients.PrivateClien
 		if h.requestRoom != nil {
 			h.unSubscribeFromRoom(client, *h.requestRoom)
 		}
+
+		h.monitoring.RemoveConnection("private")
 	}()
 
 	for {
