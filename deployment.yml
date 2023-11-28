@@ -6,7 +6,7 @@ metadata:
   name: websocket
   namespace: micro
 spec:
-  replicas: 8
+  replicas: 1
   selector:
     matchLabels:
       io.kompose.service: websocket
@@ -36,7 +36,6 @@ spec:
           value: redis-gateway-master.redis.svc.cluster.local
         - name: WEBSOCKET_REDIS_PORT
           value: "6379"
-          
         image: repo.abanicon.com:5050/abantheter-microservices/websocket:v1.1.0
         imagePullPolicy: "Always"
         name: app
