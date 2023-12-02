@@ -6,8 +6,9 @@ version: '3.5'
 services:
 
   # App Service
-  app:
+  app1:
     # Configuration for building the docker image for the service
+    container_name: websocket_app_1
     build:
       context: . # Use an image built from the specified dockerfile in the current directory.
       dockerfile: Dockerfile
@@ -16,6 +17,8 @@ services:
       - "8081:8080" # Forward the exposed port 8080 on the container to port 8080 on the host machine
     restart: unless-stopped
     environment: # Pass environment variables to the service
+      WEBSOCKET_SERVER_HOST: 0.0.0.0
+      WEBSOCKET_SERVER_PORT: 8080
       KAFKA_HOST: ${KAFKA_HOST}
       KAFKA_PORT: ${KAFKA_PORT}
       ENVIRONMENT: ${ENVIRONMENT}
@@ -26,6 +29,7 @@ services:
 
   app2:
     # Configuration for building the docker image for the service
+    container_name: websocket_app_2
     build:
       context: . # Use an image built from the specified dockerfile in the current directory.
       dockerfile: Dockerfile
@@ -34,6 +38,8 @@ services:
       - "8084:8080" # Forward the exposed port 8080 on the container to port 8080 on the host machine
     restart: unless-stopped
     environment: # Pass environment variables to the service
+      WEBSOCKET_SERVER_HOST: 0.0.0.0
+      WEBSOCKET_SERVER_PORT: 8080
       KAFKA_HOST: ${KAFKA_HOST}
       KAFKA_PORT: ${KAFKA_PORT}
       ENVIRONMENT: ${ENVIRONMENT}
