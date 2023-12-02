@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"log"
 	"net"
@@ -11,6 +12,7 @@ import (
 	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
+	"strings"
 )
 
 const PollingTimeout = 100 // unit: ms
@@ -69,7 +71,7 @@ func (k *Kafka) CreateTopics(ctx context.Context, topics []string, partitions, r
 func (k *Kafka) Consume(ctx context.Context, topic string, publicResponseFunction, privateResponseFunction func(header, key, value []byte)) {
 	defer fmt.Println("Closing kafka consumer...")
 	logrus.Infof("consuming topic %s: \n", topic)
-	groupId := k.config.Group
+	groupId := generateGroupId(k.config.Group)
 
 	for {
 		run := true
@@ -318,4 +320,16 @@ func (k *Kafka) assignConsumerToTopic(topic string, partition int, consumer *kaf
 	}
 
 	fmt.Printf("consumer %v assigned to partition: %v \n", consumer, partition)
+}
+
+func generateGroupId(group string) string {
+	podName := os.Getenv("WEBSOCKET_POD_NAME")
+	if podName != "" {
+		// ex: gateway-5c5898d67d-22vnw
+		return fmt.Sprintf("%v-%v", group, podName)
+	}
+
+	uuid, _ := uuid.NewUUID()
+	parts := strings.Split(uuid.String(), "-")
+	return fmt.Sprintf("%v-%v", group, parts[0])
 }

@@ -18,6 +18,10 @@ spec:
     spec:
       containers:
       - env:
+        - name: WEBSOCKET_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         - name: WEBSOCKET_DEBUG
           value: "true"
         - name: WEBSOCKET_SENTRY_DSN

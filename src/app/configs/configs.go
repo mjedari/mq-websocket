@@ -64,7 +64,12 @@ type Debug struct {
 	Allocation bool
 }
 
+type Pod struct {
+	Name string
+}
+
 type Configuration struct {
+	Pod         Pod
 	Server      Server
 	Redis       RedisConfig
 	Kafka       KafkaConfig
