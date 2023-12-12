@@ -12,7 +12,7 @@ Redis:
 Kafka:
   Host: kafka # 192.168.130.4
   Port: 9092 #29092
-  Group: websocket_group_2
+  Group: ws-group
   AuthsGroup: auths-consumer-group
   ResponseTopic: websocket_response_topic
   ResponsePartitionsCount: 1
