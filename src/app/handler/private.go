@@ -12,6 +12,7 @@ import (
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/messaging"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/rooms"
+	"sync"
 )
 
 var privateUpgrader = websocket.Upgrader{
@@ -23,16 +24,17 @@ var privateUpgrader = websocket.Upgrader{
 }
 
 type PrivateHandler struct {
-	hub         *hub.Hub
-	monitoring  contracts.IMonitoring
-	requestRoom *contracts.IPrivateRoom
+	hub          *hub.Hub
+	monitoring   contracts.IMonitoring
+	requestRoom  *contracts.IPrivateRoom
+	requestRooms sync.Map
 }
 
 func NewPrivateHandler(hub *hub.Hub, monitoring contracts.IMonitoring) *PrivateHandler {
 	return &PrivateHandler{hub: hub, monitoring: monitoring}
 }
 
-func (h PrivateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *PrivateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	userId := r.Context().Value("user_id").(string)
 	deviceId := r.Context().Value("device_id").(string)
 
@@ -66,9 +68,17 @@ func (h PrivateHandler) Handle(ctx context.Context, client *clients.PrivateClien
 		if client.Socket != nil {
 			client.Socket.Close()
 		}
-		if h.requestRoom != nil {
-			h.unSubscribeFromRoom(client, *h.requestRoom)
-		}
+		client.Leave()
+		client.RemoveConnection()
+
+		h.requestRooms.Range(func(key, value any) bool {
+			room, ok := value.(contracts.IRoom)
+			if !ok {
+				return false
+			}
+			h.unSubscribeFromRoom(client, room)
+			return true
+		})
 
 		h.monitoring.RemoveConnection("private")
 	}()
@@ -93,18 +103,22 @@ func (h PrivateHandler) Handle(ctx context.Context, client *clients.PrivateClien
 				return rooms.NewPrivateRoom(name)
 			})
 
-			h.requestRoom = &room
+			h.requestRooms.Store(room.GetName(), room)
 
 			if err != nil {
+				// todo: handle this: decide to return error or continue
 				return err
 			}
 			h.subscribeToRoom(client, room)
 
 		case "unsubscribe":
-			clientRoom, _ := h.hub.GetClientRoom(client.GetId())
-			if clientRoom != nil {
-				h.unSubscribeFromRoom(client, clientRoom)
+			room, err := h.hub.GetPrivateRoom(msg.Channel, nil)
+			if err != nil {
+				// todo: log the error and wait to next command
+				continue
 			}
+
+			h.unSubscribeFromRoom(client, room)
 
 		case "publish":
 			// it is not featured to be implemented
@@ -113,17 +127,21 @@ func (h PrivateHandler) Handle(ctx context.Context, client *clients.PrivateClien
 	return nil
 }
 
-func (h PrivateHandler) subscribeToRoom(client *clients.PrivateClient, room contracts.IRoom) {
+func (h *PrivateHandler) subscribeToRoom(client *clients.PrivateClient, room contracts.IRoom) {
 	fmt.Println("subscribed to channel:", room.GetName())
 	h.monitoring.AddClientToRoom(room.GetName())
 	room.SetClient(client)
 	h.hub.SetClientRoom(client.GetId(), room)
 }
 
-func (h PrivateHandler) unSubscribeFromRoom(client *clients.PrivateClient, room contracts.IRoom) {
-	fmt.Println("unsubscribed from channel:", room.GetName())
-	h.monitoring.RemoveClientFromRoom(room.GetName())
-	client.RemoveConnection()
-	h.hub.RemoveClientRoom(client.GetId())
-	room.Leave(client)
+func (h *PrivateHandler) unSubscribeFromRoom(client *clients.PrivateClient, rooms ...contracts.IRoom) {
+	for _, room := range rooms {
+		fmt.Println("unsubscribed from channel:", room.GetName())
+		//client.RemoveConnection()
+		h.hub.RemoveClientRoom(client.GetId())
+		existed := room.Leave(client)
+		if existed {
+			h.monitoring.RemoveClientFromRoom(room.GetName())
+		}
+	}
 }
