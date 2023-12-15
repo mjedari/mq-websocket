@@ -27,6 +27,11 @@ func NewHub() *Hub {
 type RoomFactory func(name string) (contracts.IRoom, error) // todo: use this
 
 func (h *Hub) GetPrivateRoom(name string, factory func(name string) (contracts.IPrivateRoom, error)) (contracts.IPrivateRoom, error) {
+	if factory == nil {
+		r, _ := h.PrivateRooms.Load(name)
+		return r.(contracts.IPrivateRoom), nil
+	}
+
 	newRoom, err := factory(name)
 	if err != nil {
 		return nil, err
