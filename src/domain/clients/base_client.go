@@ -3,8 +3,8 @@ package clients
 import (
 	"context"
 	"github.com/google/uuid"
-	"log"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
+	"repo.abanicon.com/public-library/glogger"
 )
 
 type BaseClient struct {
@@ -62,7 +62,7 @@ func (c *BaseClient) ReadFromClient(ctx context.Context) {
 		default:
 			_, _, err := c.Socket.ReadMessage()
 			if err != nil {
-				log.Println(err)
+				glogger.Error(err)
 				return
 			}
 		case <-ctx.Done():

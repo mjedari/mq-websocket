@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/auth"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
+	"repo.abanicon.com/public-library/glogger"
 )
 
 type AuthService struct {
@@ -71,6 +71,6 @@ func (a *AuthService) logout(ctx context.Context, message []byte) {
 
 	if err := a.storage.Delete(ctx, authLogoutResponse.Token); err != nil {
 		// handle err
-		logrus.Error(err)
+		glogger.Error(err)
 	}
 }

@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
-	"log"
 	"net"
 	"os"
 	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
+	"repo.abanicon.com/public-library/glogger"
 	"strings"
 )
 
@@ -60,29 +59,29 @@ func (k *Kafka) CreateTopics(ctx context.Context, topics []string, partitions, r
 	}
 	result, err := k.AdminClient.CreateTopics(ctx, topicConfigs)
 	if err != nil && len(result) == 0 {
-		log.Println(err)
+		glogger.Error(err)
 		panic(fmt.Sprintf("error in topic creation: %s", err.Error()))
 	}
 
-	logrus.Info("topics were created: ", topics)
+	glogger.Info("topics were created: ", topics)
 	return nil
 }
 
 func (k *Kafka) Consume(ctx context.Context, topic string, publicResponseFunction, privateResponseFunction func(header, key, value []byte)) {
 	defer fmt.Println("Closing kafka consumer...")
-	logrus.Infof("consuming topic %s: \n", topic)
+	glogger.Infof("consuming topic %s: \n", topic)
 	groupId := generateGroupId(k.config.Group)
 
 	for {
 		run := true
 		consumer, err := k.createNewConsumer(groupId)
 		if err != nil {
-			log.Println("error in consuming topic", topic, err)
+			glogger.Println("error in consuming topic", topic, err)
 			panic(err)
 		}
 
 		if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
-			logrus.Error("failed to close subscriber:", subscribeErr)
+			glogger.Error("failed to close subscriber:", subscribeErr)
 		}
 
 		//k.assignConsumerToTopic(topic, 0, consumer)
@@ -122,7 +121,7 @@ func (k *Kafka) Consume(ctx context.Context, topic string, publicResponseFunctio
 
 					//headers, _ := json.Marshal(e.Headers)
 					// todo: print in just debug mode
-					//log.Println("message received", topic, string(e.Value), string(headers), getCorrelationId(e.Headers))
+					//glogger.Println("message received", topic, string(e.Value), string(headers), getCorrelationId(e.Headers))
 					publicResponseFunction(nil, e.Key, e.Value)
 					//responseChan <- message
 
@@ -176,7 +175,7 @@ func (k *Kafka) Produce(ctx context.Context, message contracts.IBrokerMessage) {
 	}
 
 	if err := producer.Produce(&newMessage, nil); err != nil {
-		log.Print("failed to write messages:", err)
+		glogger.Print("failed to write messages:", err)
 	}
 
 	defer producer.Close()
@@ -228,13 +227,13 @@ func (k *Kafka) generateMessageHeaders(requestId string, responseTopic string) [
 func (k *Kafka) ConsumeHealth(ctx context.Context, topic string) ([]byte, error) {
 	newConsumer, err := k.createHealthConsumer()
 	if err != nil {
-		log.Println("error in consuming topic", topic, err)
+		glogger.Println("error in consuming topic", topic, err)
 		return nil, err
 	}
 
 	defer func() {
 		if closeErr := newConsumer.Close(); closeErr != nil {
-			logrus.Error("failed to close reader:", closeErr)
+			glogger.Error("failed to close reader:", closeErr)
 		}
 	}()
 
@@ -247,10 +246,10 @@ func (k *Kafka) ConsumeHealth(ctx context.Context, topic string) ([]byte, error)
 		default:
 			msg, consumeErr := newConsumer.ReadMessage(-1)
 			if consumeErr != nil {
-				logrus.Errorf("read message error on topic %s: %v\n", topic, consumeErr)
+				glogger.Errorf("read message error on topic %s: %v\n", topic, consumeErr)
 				return nil, consumeErr
 			}
-			log.Println("message received", topic, string(msg.Value))
+			glogger.Println("message received", topic, string(msg.Value))
 			return msg.Value, nil
 		case <-ctx.Done():
 			return nil, nil
@@ -260,18 +259,18 @@ func (k *Kafka) ConsumeHealth(ctx context.Context, topic string) ([]byte, error)
 
 func (k *Kafka) ConsumeAuth(ctx context.Context, topic string, authResponseFunction func(header, key, value []byte)) {
 	defer fmt.Println("Closing kafka auth consumer...")
-	logrus.Infof("consuming topic %s: %v \n", topic, authResponseFunction)
+	glogger.Infof("consuming topic %s: %v \n", topic, authResponseFunction)
 	groupId := k.config.AuthsGroup
 	for {
 		run := true
 		consumer, err := k.createNewConsumer(groupId)
 		if err != nil {
-			log.Println("error in consuming topic", topic, err)
+			glogger.Println("error in consuming topic", topic, err)
 			panic(err)
 		}
 
 		if subscribeErr := consumer.SubscribeTopics([]string{topic}, nil); subscribeErr != nil {
-			logrus.Error("failed to close subscriber:", subscribeErr)
+			glogger.Error("failed to close subscriber:", subscribeErr)
 		}
 		// assign the consumer to the specific partition of the topic
 		//k.assignConsumerToTopic(topic, 0, consumer)
@@ -289,7 +288,7 @@ func (k *Kafka) ConsumeAuth(ctx context.Context, topic string, authResponseFunct
 
 				switch e := ev.(type) {
 				case *kafka.Message:
-					log.Println("message received", topic, string(e.Value))
+					glogger.Println("message received", topic, string(e.Value))
 					authResponseFunction(nil, e.Key, e.Value)
 					// TODO: handle logout keys also
 
@@ -316,7 +315,7 @@ func (k *Kafka) assignConsumerToTopic(topic string, partition int, consumer *kaf
 	}
 	assignErr := consumer.Assign(partitions)
 	if assignErr != nil {
-		logrus.Fatalf("failed to assign consumer %v to partition %v \n", consumer, partition)
+		glogger.Fatalf("failed to assign consumer %v to partition %v \n", consumer, partition)
 	}
 
 	fmt.Printf("consumer %v assigned to partition: %v \n", consumer, partition)

@@ -3,11 +3,11 @@ package messaging
 import (
 	"context"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/messaging"
+	"repo.abanicon.com/public-library/glogger"
 )
 
 type Messaging struct {
@@ -92,7 +92,7 @@ func (m *Messaging) HealthCheck(ctx context.Context) error {
 		panic(err)
 	}
 	if string(result) == string(testingMessage.Message) {
-		log.Info("Kafka is listening")
+		glogger.Info("Kafka is listening")
 	}
 
 	return nil

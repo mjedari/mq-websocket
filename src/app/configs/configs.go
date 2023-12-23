@@ -1,10 +1,13 @@
 package configs
 
+import "strings"
+
 var Config Configuration
 
 type Server struct {
-	Host string
-	Port string
+	Host        string
+	Port        string
+	Environment string
 }
 
 type KafkaConfig struct {
@@ -79,4 +82,9 @@ type Configuration struct {
 	RateLimiter RateLimiter
 	Security    Security
 	Debug       Debug
+}
+
+func (c *Configuration) IsProduction() bool {
+	return strings.ToLower(c.Server.Environment) == "production" ||
+		strings.ToLower(c.Server.Environment) == "prod"
 }
