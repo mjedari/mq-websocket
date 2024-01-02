@@ -11,8 +11,8 @@ import (
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/messaging"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/rooms"
+	"repo.abanicon.com/abantheter-microservices/websocket/infra/utils"
 	"repo.abanicon.com/public-library/glogger"
-	"sync"
 )
 
 var publicUpgrader = websocket.Upgrader{
@@ -24,14 +24,13 @@ var publicUpgrader = websocket.Upgrader{
 }
 
 type PublicHandler struct {
-	hub        *hub.Hub
-	monitoring contracts.IMonitoring
-	// todo: check this out: requestRooms []*contracts.IPublicRoom
-	requestRooms sync.Map
+	hub          *hub.Hub
+	monitoring   contracts.IMonitoring
+	requestRooms *utils.SafeMap
 }
 
 func NewPublicHandler(hub *hub.Hub, monitoring contracts.IMonitoring) *PublicHandler {
-	return &PublicHandler{hub: hub, monitoring: monitoring}
+	return &PublicHandler{hub: hub, requestRooms: utils.NewSafeMap(), monitoring: monitoring}
 }
 
 func (h *PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

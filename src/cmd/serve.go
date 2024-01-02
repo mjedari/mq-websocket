@@ -40,10 +40,10 @@ var serveCmd = &cobra.Command{
 		<-c
 		cancel()
 		fmt.Println()
-		for i := 10; i > 0; i-- {
-			time.Sleep(time.Second * 1)
-			fmt.Printf("\033[2K\rShutting down ... : %d", i)
-		}
+		//for i := 10; i > 0; i-- {
+		//	time.Sleep(time.Second * 1)
+		//	fmt.Printf("\033[2K\rShutting down ... : %d", i)
+		//}
 
 		// Perform any necessary cleanup before exiting
 		fmt.Println("\nService exited successfully.")

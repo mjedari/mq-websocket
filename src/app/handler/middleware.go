@@ -56,7 +56,7 @@ func RateLimiterMiddleware(next http.Handler) http.Handler {
 func LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Our middleware logic goes here...
-		glogger.Println("request :", r.Method, r.URL.Path)
+		glogger.Println("request : %v, %v", r.Method, r.URL.Path)
 
 		next.ServeHTTP(w, r)
 	})

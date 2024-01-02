@@ -8,6 +8,7 @@ import (
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/messaging"
 	"repo.abanicon.com/public-library/glogger"
+	"time"
 )
 
 type Messaging struct {
@@ -73,6 +74,9 @@ func (m *Messaging) Run(ctx context.Context) {
 
 	// start handling
 	m.streaming(ctx)
+
+	// monitor hub
+	m.monitorHub()
 }
 
 func (m *Messaging) HealthCheck(ctx context.Context) error {
@@ -165,7 +169,6 @@ func (m *Messaging) publicStreaming(ctx context.Context) {
 			m.hub.PublicRooms.Range(func(key, value any) bool {
 				r, ok := value.(contracts.IPublicRoom)
 				if !ok {
-					fmt.Println("not found public channel")
 					return false
 				}
 				if r.GetName() == string(msg.Room) {
@@ -199,4 +202,35 @@ func (m *Messaging) LeaveClient(ctx context.Context, userId string) {
 
 		return true
 	})
+}
+
+func (m *Messaging) monitorHub() {
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		for {
+			<-ticker.C
+
+			m.monitoring.MonitoringHubMetrics("clients", m.hub.ClientRooms.Len())
+			m.monitoring.MonitoringHubMetrics("private_rooms", m.hub.PrivateRooms.Len())
+			m.monitoring.MonitoringHubMetrics("public_rooms", m.hub.PublicRooms.Len())
+			var publicRoomMembers int
+			m.hub.PublicRooms.Range(func(key any, value any) bool {
+				room := value.(contracts.IPublicRoom)
+				publicRoomMembers += room.Members()
+				return true
+			})
+
+			var privateRoomMembers int
+			m.hub.PrivateRooms.Range(func(key any, value any) bool {
+				room := value.(contracts.IPrivateRoom)
+				privateRoomMembers += room.Members()
+				return true
+			})
+
+			m.monitoring.MonitoringHubMetrics("private_room_members", privateRoomMembers)
+			m.monitoring.MonitoringHubMetrics("public_room_members", publicRoomMembers)
+		}
+	}()
+
 }
