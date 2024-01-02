@@ -1,14 +1,15 @@
 package contracts
 
 import (
-	"sync"
+	"repo.abanicon.com/abantheter-microservices/websocket/infra/utils"
 )
 
 type IRoom interface {
 	GetName() string
-	GetClients() *sync.Map
+	GetClients() *utils.SafeMap
 	Leave(c IClient) bool
 	SetClient(client IClient)
+	Members() int
 }
 
 type IPublicRoom interface {

@@ -7,4 +7,5 @@ type IMonitoring interface {
 	MessageReceived(room, kind string)
 	AddConnection(kind string)
 	RemoveConnection(kind string)
+	MonitoringHubMetrics(kind string, members int)
 }

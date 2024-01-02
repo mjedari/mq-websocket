@@ -33,6 +33,8 @@ func NewBaseClient(socket contracts.ISocket) *BaseClient {
 }
 
 func (c *BaseClient) WriteOnConnection(ctx context.Context) {
+	defer glogger.Info("close write on connection")
+
 	for {
 		select {
 		case message, ok := <-c.Send:
