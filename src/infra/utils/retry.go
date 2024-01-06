@@ -2,7 +2,7 @@ package utils
 
 import (
 	"context"
-	"log"
+	"repo.abanicon.com/public-library/glogger"
 	"time"
 )
 
@@ -19,7 +19,7 @@ func Retry(effector Effector, retries int, delay time.Duration) Effector {
 				return response, err
 			}
 
-			log.Printf("Attempt %d failed; retrying in %v", r+1, delay)
+			glogger.Println("Attempt %d failed; retrying in %v", r+1, delay)
 
 			select {
 			case <-time.After(delay):

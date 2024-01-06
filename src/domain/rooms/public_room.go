@@ -11,15 +11,14 @@ type PublicRoom struct {
 
 func NewPublicRoom(name string) (*PublicRoom, error) {
 	// you can set some rules to prevent get new rooms by returning err
-	return &PublicRoom{&BaseRoom{
-		Name: name,
-	}}, nil
+	baseRoom, _ := NewBaseRoom(name)
+	return &PublicRoom{baseRoom}, nil
 }
 
 func (r *PublicRoom) Broadcast(message []byte) {
 	var clientNumbers uint64
 
-	r.Clients.Range(func(key, value any) bool {
+	r.clients.Range(func(key, value any) bool {
 		clientNumbers++
 
 		c, ok := value.(contracts.IClient)

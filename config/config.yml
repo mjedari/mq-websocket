@@ -1,6 +1,7 @@
 Server:
   Host: websocket_app_1
   Port: 8080
+  Environment: local # production, local
 
 Redis:
   Host: redis-server

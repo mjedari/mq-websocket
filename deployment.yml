@@ -28,7 +28,7 @@ spec:
           value: 'https://331c2f339f31410496fc86f99ec1986b@sentry.abantether.info/2'
         - name: WEBSOCKET_SENTRY_SAMPLE_RATE
           value: "0.1"
-        - name: WEBSOCKET_ENVIRONMENT
+        - name: WEBSOCKET_SERVER_ENVIRONMENT
           value: production
         - name: WEBSOCKET_SERVER_HOST
           value: "0.0.0.0"

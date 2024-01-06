@@ -6,13 +6,26 @@ import (
 )
 
 type Prometheus struct {
+	hubMetrics           *prometheus.GaugeVec
 	clientsInRoom        *prometheus.GaugeVec
 	onlineConnections    *prometheus.GaugeVec
 	messagesReceived     *prometheus.CounterVec
 	authenticationFailed prometheus.Counter
 }
 
+func (p Prometheus) MonitoringHubMetrics(kind string, members int) {
+	p.hubMetrics.With(prometheus.Labels{"kind": kind}).Set(float64(members))
+}
+
 func NewPrometheus() *Prometheus {
+	hubMetrics := promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "hub_metrics",
+			Help: "All websocket single hub metrics",
+		},
+		[]string{"kind"},
+	)
+
 	clientsInRoom := promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "clients_in_room",
@@ -42,7 +55,9 @@ func NewPrometheus() *Prometheus {
 		Help: "Total number of failed transactions",
 	})
 
-	return &Prometheus{onlineConnections: onlineConnections, clientsInRoom: clientsInRoom, messagesReceived: messagesReceived, authenticationFailed: authenticationFailed}
+	return &Prometheus{hubMetrics: hubMetrics, onlineConnections: onlineConnections,
+		clientsInRoom: clientsInRoom, messagesReceived: messagesReceived,
+		authenticationFailed: authenticationFailed}
 }
 
 func (p Prometheus) AddClientToRoom(room string) {

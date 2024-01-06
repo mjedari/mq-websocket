@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
+	"repo.abanicon.com/public-library/glogger"
 	"strings"
 )
 
@@ -37,8 +37,8 @@ func initConfig() {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("Fatal error config file: %s \n", err)
+		glogger.Fatalf("Fatal error config file: %s \n", err)
 	}
 	viper.Unmarshal(&configs.Config)
-	log.Info("configuration initialized! (Notice: configurations may be initialised from OS ENV)")
+	glogger.Println("configuration initialized! (Notice: configurations may be initialised from OS ENV)")
 }

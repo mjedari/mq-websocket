@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/getsentry/sentry-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"net"
 	"net/http"
@@ -23,6 +23,7 @@ import (
 	"repo.abanicon.com/abantheter-microservices/websocket/infra/rate_limiter"
 	"repo.abanicon.com/abantheter-microservices/websocket/infra/storage"
 	"repo.abanicon.com/abantheter-microservices/websocket/infra/utils"
+	"repo.abanicon.com/public-library/glogger"
 	"time"
 )
 
@@ -39,10 +40,10 @@ var serveCmd = &cobra.Command{
 		<-c
 		cancel()
 		fmt.Println()
-		for i := 10; i > 0; i-- {
-			time.Sleep(time.Second * 1)
-			fmt.Printf("\033[2K\rShutting down ... : %d", i)
-		}
+		//for i := 10; i > 0; i-- {
+		//	time.Sleep(time.Second * 1)
+		//	fmt.Printf("\033[2K\rShutting down ... : %d", i)
+		//}
 
 		// Perform any necessary cleanup before exiting
 		fmt.Println("\nService exited successfully.")
@@ -58,6 +59,7 @@ func serve(ctx context.Context) {
 	//go func() {
 	//	fmt.Println(http.ListenAndServe("localhost:6000", nil))
 	//}()
+	initLogging(ctx)
 	initSentry()
 	initWiring(ctx)
 
@@ -72,6 +74,13 @@ func serve(ctx context.Context) {
 	messagingService.Run(ctx)
 
 	go runHttpServer(ctx, newHub)
+}
+
+func initLogging(ctx context.Context) {
+	glogger.SetConfig(glogger.Config{Production: configs.Config.IsProduction()})
+	//sub := monitoring.NewSentrySubscriber(monitoring.SentrySubscriberConfig{Method: monitoring.Async})
+	//sub.Run(ctx)
+	//logger.Subscribe(sub)
 }
 
 func runHttpServer(ctx context.Context, hub *hub.Hub) {
@@ -95,7 +104,7 @@ func runHttpServer(ctx context.Context, hub *hub.Hub) {
 	mux.Handle("/metrics", promhttp.Handler())
 
 	address := net.JoinHostPort(configs.Config.Server.Host, configs.Config.Server.Port)
-	log.WithField("HTTP_Host", configs.Config.Server.Host).
+	logrus.WithField("HTTP_Host", configs.Config.Server.Host).
 		WithField("HTTP_Port", configs.Config.Server.Port).
 		Info("starting HTTP/REST websocket...")
 
@@ -108,7 +117,7 @@ func runHttpServer(ctx context.Context, hub *hub.Hub) {
 
 	err := server.ListenAndServe()
 	if err != nil {
-		log.Fatal(err)
+		glogger.Fatal(err)
 		sentry.CaptureException(err)
 	}
 
@@ -127,12 +136,12 @@ func runHttpServer(ctx context.Context, hub *hub.Hub) {
 func initWiring(ctx context.Context) {
 	redisProvider, err := storage.NewRedis(configs.Config.Redis)
 	if err != nil {
-		log.Fatalf("Fatal error on create redis("+configs.Config.Redis.Host+":"+configs.Config.Redis.Port+")connection: %s \n", err)
+		glogger.Fatalf("Fatal error on create redis("+configs.Config.Redis.Host+":"+configs.Config.Redis.Port+")connection: %s \n", err)
 	}
 
 	kafkaProvider, err := broker.NewKafka(configs.Config.Kafka)
 	if err != nil {
-		log.Fatalf("Fatal error on create kafka connection: %s \n", err)
+		glogger.Fatalf("Fatal error on create kafka connection: %s \n", err)
 	}
 
 	rateLimiter := rate_limiter.NewRateLimiter(configs.Config.RateLimiter)
@@ -146,7 +155,7 @@ func initWiring(ctx context.Context) {
 	// register profiling
 	utils.NewProfiling(configs.Config.Debug).Register()
 
-	log.Info("wiring initialized")
+	glogger.Info("wiring initialized")
 }
 
 func initSentry() {
@@ -161,6 +170,6 @@ func initSentry() {
 	})
 
 	if err != nil {
-		log.Fatalf("sentry.Init: %s", err)
+		glogger.Fatalf("sentry.Init: %s", err)
 	}
 }

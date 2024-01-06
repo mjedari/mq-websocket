@@ -11,14 +11,13 @@ type PrivateRoom struct {
 
 func NewPrivateRoom(name string) (*PrivateRoom, error) {
 	// you can set some rules to prevent get new rooms by returning err
-	return &PrivateRoom{&BaseRoom{
-		Name: name,
-	}}, nil
+	baseRoom, _ := NewBaseRoom(name)
+	return &PrivateRoom{baseRoom}, nil
 }
 
 func (r *BaseRoom) PrivateSend(userId string, message []byte) {
 	var clientNumbers uint64
-	r.Clients.Range(func(key, value any) bool {
+	r.clients.Range(func(key, value any) bool {
 		clientNumbers++
 		c, ok := value.(contracts.IClient)
 		if !ok {

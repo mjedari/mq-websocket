@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
-	"log"
 	"net/http"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/clients"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/messaging"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/rooms"
-	"sync"
+	"repo.abanicon.com/abantheter-microservices/websocket/infra/utils"
+	"repo.abanicon.com/public-library/glogger"
 )
 
 var privateUpgrader = websocket.Upgrader{
@@ -27,11 +27,11 @@ type PrivateHandler struct {
 	hub          *hub.Hub
 	monitoring   contracts.IMonitoring
 	requestRoom  *contracts.IPrivateRoom
-	requestRooms sync.Map
+	requestRooms *utils.SafeMap
 }
 
 func NewPrivateHandler(hub *hub.Hub, monitoring contracts.IMonitoring) *PrivateHandler {
-	return &PrivateHandler{hub: hub, monitoring: monitoring}
+	return &PrivateHandler{hub: hub, requestRooms: utils.NewSafeMap(), monitoring: monitoring}
 }
 
 func (h *PrivateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +42,7 @@ func (h *PrivateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	conn, socketErr := privateUpgrader.Upgrade(w, r, nil)
 	if socketErr != nil {
-		log.Println(socketErr)
+		glogger.Error(socketErr)
 		return
 	}
 	defer func() {
@@ -114,7 +114,7 @@ func (h PrivateHandler) Handle(ctx context.Context, client *clients.PrivateClien
 		case "unsubscribe":
 			room, err := h.hub.GetPrivateRoom(msg.Channel, nil)
 			if err != nil {
-				// todo: log the error and wait to next command
+				// todo: glogger the error and wait to next command
 				continue
 			}
 

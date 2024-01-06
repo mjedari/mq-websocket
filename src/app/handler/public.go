@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
-	"log"
 	"net/http"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/clients"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/messaging"
 	"repo.abanicon.com/abantheter-microservices/websocket/domain/rooms"
-	"sync"
+	"repo.abanicon.com/abantheter-microservices/websocket/infra/utils"
+	"repo.abanicon.com/public-library/glogger"
 )
 
 var publicUpgrader = websocket.Upgrader{
@@ -24,14 +24,13 @@ var publicUpgrader = websocket.Upgrader{
 }
 
 type PublicHandler struct {
-	hub        *hub.Hub
-	monitoring contracts.IMonitoring
-	// todo: check this out: requestRooms []*contracts.IPublicRoom
-	requestRooms sync.Map
+	hub          *hub.Hub
+	monitoring   contracts.IMonitoring
+	requestRooms *utils.SafeMap
 }
 
 func NewPublicHandler(hub *hub.Hub, monitoring contracts.IMonitoring) *PublicHandler {
-	return &PublicHandler{hub: hub, monitoring: monitoring}
+	return &PublicHandler{hub: hub, requestRooms: utils.NewSafeMap(), monitoring: monitoring}
 }
 
 func (h *PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +39,7 @@ func (h *PublicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	conn, socketErr := publicUpgrader.Upgrade(w, r, nil)
 	if socketErr != nil {
-		log.Println(socketErr)
+		glogger.Error(socketErr)
 		return
 	}
 
@@ -110,7 +109,7 @@ func (h *PublicHandler) Handle(ctx context.Context, client *clients.PublicClient
 		case "unsubscribe":
 			room, err := h.hub.GetPublicRoom(msg.Channel, nil)
 			if err != nil {
-				// todo: log the error and wait to next command
+				// todo: glogger the error and wait to next command
 				continue
 			}
 
