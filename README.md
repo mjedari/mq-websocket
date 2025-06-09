@@ -1,6 +1,6 @@
 # websocket
 
-Aban Thether's websocket project.
+Websocket project.
 
 ### Table of Contents
 
