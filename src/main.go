@@ -1,7 +1,7 @@
 package main
 
 import (
-	"repo.abanicon.com/abantheter-microservices/websocket/cmd"
+	"github.com/mjedari/mq-websocket/cmd"
 )
 
 func main() {

@@ -1,7 +1,7 @@
 package wiring
 
 import (
-	"repo.abanicon.com/abantheter-microservices/websocket/app/messaging"
+	"github.com/mjedari/mq-websocket/app/messaging"
 )
 
 func (w *Wire) GetAuthService() *messaging.AuthService {

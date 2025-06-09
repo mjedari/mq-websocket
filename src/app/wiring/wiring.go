@@ -1,12 +1,12 @@
 package wiring
 
 import (
-	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
-	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
-	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
-	"repo.abanicon.com/abantheter-microservices/websocket/infra/broker"
-	"repo.abanicon.com/abantheter-microservices/websocket/infra/monitoring"
-	"repo.abanicon.com/abantheter-microservices/websocket/infra/rate_limiter"
+	"github.com/mjedari/mq-websocket/app/configs"
+	"github.com/mjedari/mq-websocket/domain/contracts"
+	"github.com/mjedari/mq-websocket/domain/hub"
+	"github.com/mjedari/mq-websocket/infra/broker"
+	"github.com/mjedari/mq-websocket/infra/monitoring"
+	"github.com/mjedari/mq-websocket/infra/rate_limiter"
 )
 
 var Wiring *Wire

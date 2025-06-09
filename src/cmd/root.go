@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"github.com/mjedari/mq-websocket/app/configs"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
 	"repo.abanicon.com/public-library/glogger"
 	"strings"
 )

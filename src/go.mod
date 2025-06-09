@@ -1,4 +1,4 @@
-module repo.abanicon.com/abantheter-microservices/websocket
+module github.com/mjedari/mq-websocket
 
 go 1.19
 

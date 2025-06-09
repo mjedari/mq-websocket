@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"repo.abanicon.com/abantheter-microservices/websocket/domain/auth"
-	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
-	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
+	"github.com/mjedari/mq-websocket/domain/auth"
+	"github.com/mjedari/mq-websocket/domain/contracts"
+	"github.com/mjedari/mq-websocket/domain/hub"
 	"repo.abanicon.com/public-library/glogger"
 )
 

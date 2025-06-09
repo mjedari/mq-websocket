@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
+	"github.com/mjedari/mq-websocket/app/configs"
 	"runtime"
 	"time"
 )

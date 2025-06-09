@@ -1,7 +1,7 @@
 package contracts
 
 import (
-	"repo.abanicon.com/abantheter-microservices/websocket/infra/utils"
+	"github.com/mjedari/mq-websocket/infra/utils"
 )
 
 type IRoom interface {

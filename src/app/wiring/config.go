@@ -1,8 +1,8 @@
 package wiring
 
 import (
+	"github.com/mjedari/mq-websocket/app/configs"
 	"net"
-	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
 )
 
 func (w *Wire) GetRedisUrl() string {

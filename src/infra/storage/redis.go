@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
-	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
-	"repo.abanicon.com/abantheter-microservices/websocket/infra/utils"
+	"github.com/mjedari/mq-websocket/app/configs"
+	"github.com/mjedari/mq-websocket/infra/utils"
 	"time"
 )
 

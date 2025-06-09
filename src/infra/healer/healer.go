@@ -3,7 +3,7 @@ package healer
 import (
 	"context"
 	"fmt"
-	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
+	"github.com/mjedari/mq-websocket/domain/contracts"
 	"time"
 )
 

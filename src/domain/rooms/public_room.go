@@ -2,7 +2,7 @@ package rooms
 
 import (
 	"fmt"
-	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
+	"github.com/mjedari/mq-websocket/domain/contracts"
 )
 
 type PublicRoom struct {

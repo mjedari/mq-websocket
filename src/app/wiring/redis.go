@@ -1,7 +1,7 @@
 package wiring
 
 import (
-	"repo.abanicon.com/abantheter-microservices/websocket/infra/storage"
+	"github.com/mjedari/mq-websocket/infra/storage"
 )
 
 func (w *Wire) SetNewRedisInstance() error {

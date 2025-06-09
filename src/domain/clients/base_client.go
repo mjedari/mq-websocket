@@ -3,7 +3,7 @@ package clients
 import (
 	"context"
 	"github.com/google/uuid"
-	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
+	"github.com/mjedari/mq-websocket/domain/contracts"
 	"repo.abanicon.com/public-library/glogger"
 )
 

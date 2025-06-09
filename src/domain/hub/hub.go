@@ -3,8 +3,8 @@ package hub
 import (
 	"errors"
 	"github.com/google/uuid"
-	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
-	"repo.abanicon.com/abantheter-microservices/websocket/infra/utils"
+	"github.com/mjedari/mq-websocket/domain/contracts"
+	"github.com/mjedari/mq-websocket/infra/utils"
 )
 
 type Hub struct {

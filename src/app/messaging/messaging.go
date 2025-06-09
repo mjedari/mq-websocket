@@ -3,10 +3,10 @@ package messaging
 import (
 	"context"
 	"fmt"
-	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
-	"repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
-	"repo.abanicon.com/abantheter-microservices/websocket/domain/hub"
-	"repo.abanicon.com/abantheter-microservices/websocket/domain/messaging"
+	"github.com/mjedari/mq-websocket/app/configs"
+	"github.com/mjedari/mq-websocket/domain/contracts"
+	"github.com/mjedari/mq-websocket/domain/hub"
+	"github.com/mjedari/mq-websocket/domain/messaging"
 	"repo.abanicon.com/public-library/glogger"
 	"time"
 )

@@ -3,7 +3,7 @@ package rate_limiter
 import (
 	"errors"
 	"fmt"
-	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
+	"github.com/mjedari/mq-websocket/app/configs"
 	"sync"
 	"time"
 )

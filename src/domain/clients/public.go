@@ -1,6 +1,6 @@
 package clients
 
-import "repo.abanicon.com/abantheter-microservices/websocket/domain/contracts"
+import "github.com/mjedari/mq-websocket/domain/contracts"
 
 type PublicClient struct {
 	BaseClient

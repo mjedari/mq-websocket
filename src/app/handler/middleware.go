@@ -3,10 +3,10 @@ package handler
 import (
 	"context"
 	"errors"
+	"github.com/mjedari/mq-websocket/app/configs"
+	"github.com/mjedari/mq-websocket/app/wiring"
 	"net"
 	"net/http"
-	"repo.abanicon.com/abantheter-microservices/websocket/app/configs"
-	"repo.abanicon.com/abantheter-microservices/websocket/app/wiring"
 	"repo.abanicon.com/public-library/glogger"
 )
 
