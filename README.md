@@ -1,6 +1,6 @@
-# websocket
+# message queue websocket
 
-Websocket project.
+Message queue websocket is a complete websocket application featuring consuming messages from message brokers like Kafka, RabbitMQ, etc and dispatching to end client.
 
 ### Table of Contents
 
