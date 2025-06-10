@@ -69,3 +69,13 @@
 * block IO (read/write)
 * network usage (read/write)
 * Garbage Collection (PauseTotalNs, NumGC)
+
+### Open Source Project:
+
+* [ ] Create a release branch
+* [ ] Write test for critical points
+* [ ] Modify README.md
+* [ ] Create a UI for Kafka publish message
+* [ ] Introduce project in LinkedIn and ask for feedback and contribution
+* [ ] Add contribution and license file
+* [ ] Checkout develop branch and decide what to do with it
