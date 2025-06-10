@@ -74,8 +74,9 @@
 
 * [ ] Create a release branch
 * [ ] Write test for critical points
-* [ ] Modify README.md
 * [ ] Create a UI for Kafka publish message
 * [ ] Introduce project in LinkedIn and ask for feedback and contribution
 * [ ] Add contribution and license file
 * [ ] Checkout develop branch and decide what to do with it
+* [ ] Use AI to write README.md
+* [ ] Use AI to create a video for the project and how it works
